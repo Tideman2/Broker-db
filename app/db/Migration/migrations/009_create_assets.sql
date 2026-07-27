@@ -1,0 +1,19 @@
+CREATE TABLE IF NOT EXISTS assets (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    symbol VARCHAR(50) NOT NULL,
+
+    name  VARCHAR(255) NOT NULL,
+    address  VARCHAR(255),
+
+    is_active BOOLEAN NOT NULL,
+
+    created_at TIMESTAMP
+        DEFAULT CURRENT_TIMESTAMP,    
+
+    updated_at TIMESTAMP
+        DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP
+        
+) ENGINE=InnoDB
+DEFAULT CHARSET=utf8mb4
+COLLATE=utf8mb4_0900_ai_ci;

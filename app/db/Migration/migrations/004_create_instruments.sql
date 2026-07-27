@@ -1,0 +1,21 @@
+CREATE TABLE IF NOT EXISTS instruments (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+
+    symbol VARCHAR(50) NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    category_id INT NOT NULL,
+
+    current_price DECIMAL(20,8) NOT NULL,
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    updated_at TIMESTAMP
+        DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP,
+    
+    FOREIGN KEY (category_id)
+    REFERENCES categories(id)
+    ON DELETE CASCADE
+) ENGINE=InnoDB
+DEFAULT CHARSET=utf8mb4
+COLLATE=utf8mb4_0900_ai_ci;
