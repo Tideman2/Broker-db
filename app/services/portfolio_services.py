@@ -3,9 +3,14 @@ from fastapi import HTTPException
 
 from app.db.connection import get_connection
 
-from app.Models.portfolio_models import BuyInstrumentRequest, SellInstrumentRequest
+from app.Models.portfolio_models import (
+    BuyInstrumentRequest,
+    SellInstrumentRequest,
+    PortfolioOverviewResponse
+)
 from app.db.queries.instrument_queries import GET_USER_INSTRUMENT_TRANSACTIONS, GROUP_USER_INSTRUMENT, GET_INSTRUMENT_RISK_WEIGHT
 from app.db.queries.transaction_queries import INSERT_BUY_TRANSACTION, INSERT_SELL_TRANSACTION
+
 
 from app.utils.wallet import (
     _credit_available,
@@ -219,21 +224,25 @@ def get_portfolio_overview(user_id: int):
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
     try:
+        print("i ran 1")
         holdings = compute_holdings(user_id)
         portfolio_value = Decimal("0")
-
+        print("i ran 2")
         # Calculate portfolio value
         for holding in holdings:
             portfolio_value += holding["instrument_value"]
 
         # Empty portfolio
         if portfolio_value == 0:
-            return {
-                "portfolio_value": Decimal("0"),
-                "asset_allocation": [],
-                "diversification_score": "N/A"
-            }
+            return PortfolioOverviewResponse(
+                portfolio_value=Decimal("0"),
+                asset_allocation=[],
+                diversification_score="N/A",
+                portfolio_risk_label="N/A",
+                portfolio_risk_score=Decimal("0")
+            )
 
+        print("i ran 3")
         allocation = []
         largest_allocation = Decimal("0")
 
@@ -288,13 +297,21 @@ def get_portfolio_overview(user_id: int):
         else:
             diversification_score = "Good"
 
-        return {
-            "portfolio_value": portfolio_value,
-            "asset_allocation": allocation,
-            "diversification_score": diversification_score,
-            "portfolio_risk_score": risk_score,
-            "portfolio_risk_label": risk_label
-        }
+        print(
+            portfolio_value,
+            allocation,
+            diversification_score,
+            risk_label,
+            risk_score
+        )
+
+        return PortfolioOverviewResponse(
+            portfolio_value=portfolio_value,
+            asset_allocation=allocation,
+            diversification_score=diversification_score,
+            portfolio_risk_score=risk_score,
+            portfolio_risk_label=risk_label
+        )
 
     except Exception as e:
         cursor.close()

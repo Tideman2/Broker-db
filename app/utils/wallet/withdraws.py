@@ -2,12 +2,21 @@ from decimal import Decimal
 from fastapi import HTTPException
 from app.db.queries.withdraw_queries import (
     GET_WITHDRAWAL_DESTINATION,
+    INSERT_WITHDRAW_DESTINATION,
+    INSERT_BANK_DESTINATION,
+    INSERT_CRYPTO_DESTINATION,
+    GET_WITHDRAW_DESTINATION_BY_LABEL,
     INSERT_WITHDRAWAL_RECORD,
     GET_ASSET_BY_SYMBOL,
     GET_WITHDRAWAL_RECORD
 )
 
-from app.Models.wallet_models import Deposit, Withdraw
+from app.Models.wallet_models import (
+    Withdraw,
+    DestinationType,
+    BankDestination,
+    CryptoDestination
+)
 
 
 def _validate_available_balance(amount: Decimal, available=0):
@@ -39,6 +48,58 @@ def _get_withdraw_destination(cursor, destination_id):
     return destination
 
 
+def _add_bank_destination(
+        cursor, destination_id: int,
+        bank: BankDestination
+):
+
+    cursor.execute(INSERT_BANK_DESTINATION,
+                   (
+                       destination_id,
+                       bank.bank_name,
+                       bank.account_name,
+                       bank.account_number
+                   )
+                   )
+
+
+def _validate_destination_label(cursor, label: str, user_id: int):
+    """
+    Check's label uniqueness or 400 error
+    """
+    cursor.execute(GET_WITHDRAW_DESTINATION_BY_LABEL, (label, user_id,))
+
+    label = cursor.fetchone()
+
+    if label:
+        raise HTTPException(
+            status_code=404,
+            detail="Label already used"
+        )
+
+
+def _add_crypto_destination(
+        cursor, destination_id: int,
+        crypto: CryptoDestination
+):
+
+    cursor.execute(INSERT_CRYPTO_DESTINATION,
+                   (destination_id, crypto.asset_id,
+                    crypto.address,))
+
+
+def _add_withdraw_destination(
+        cursor, user_id: int,
+        label: str, destination_type: DestinationType,
+):
+    """
+    Add withdraw_destination.
+    """
+
+    cursor.execute(INSERT_WITHDRAW_DESTINATION,
+                   (user_id, label, destination_type,))
+
+
 def _create_withdraw_record(cursor, withdraw: Withdraw):
     """
     To add withdraw record to db.
@@ -47,15 +108,6 @@ def _create_withdraw_record(cursor, withdraw: Withdraw):
     cursor.execute(INSERT_WITHDRAWAL_RECORD,
                    (withdraw.user_id, withdraw.asset_id,
                     withdraw.destination_id, withdraw.amount,))
-    destination = cursor.fetchone()
-
-    if not destination:
-        raise HTTPException(
-            status_code=404,
-            detail="Could not add withdraw record"
-        )
-
-    return destination
 
 
 def _get_asset_by_symbol(cursor, symbol: str):

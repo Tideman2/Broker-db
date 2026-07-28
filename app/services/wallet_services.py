@@ -205,12 +205,10 @@ def submit_withdrawal(
 
         # create withdrawal record
         withdraw = Withdraw(
-            withdraw=Withdraw(
-                user_id=user_id,
-                asset_id=asset_id,
-                destination_id=request.destination_id,
-                amount=request.amount,
-            )
+            user_id=user_id,
+            asset_id=asset_id,
+            destination_id=request.destination_id,
+            amount=request.amount,
         )
 
         _create_withdraw_record(cursor, withdraw)
