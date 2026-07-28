@@ -3,7 +3,7 @@ from fastapi import HTTPException
 from app.db.connection import get_connection
 from app.Models.auth_models import User, CreateUserResponse, LoginUserRequest
 from app.db.queries.user_queries import INSERT_USER, INSERT_ADDRESS, GET_USER_BY_ID, GET_USER_BY_EMAIL
-# from app.utils.wallet_helpers import _create_wallet
+
 from app.utils.wallet import (
     _create_wallet
 )

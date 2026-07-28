@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS crypto_destinations (
 
         FOREIGN KEY (withdrawal_destinations_id)
         REFERENCES withdrawal_destination(id)
-        ON DELETE CASCADE
+        ON DELETE CASCADE,
 
         FOREIGN KEY (asset_id)
         REFERENCES assets(id)

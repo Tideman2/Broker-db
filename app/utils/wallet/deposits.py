@@ -23,7 +23,7 @@ def _create_deposit_record(cursor, user_id: int, deposit: Deposit):
 
 def _validate_amount(amount: Decimal):
     """
-    Validates if amount is greater tha. 0.
+    Validates amount.
     """
 
     if amount <= 0:

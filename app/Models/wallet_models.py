@@ -105,3 +105,40 @@ class DestinationResponse(BaseModel):
 class WithdrawFundsRequest(BaseModel):
     amount: Decimal
     destination_id: int
+
+
+class WithdrawStatus(str, Enum):
+    pending = "pending"
+    confirmed = "confirmed"
+    rejected = "rejected"
+
+
+class WithdrawFundsResponse(BaseModel):
+    id: int
+
+    amount: Decimal
+    status: WithdrawStatus
+
+    created_at: datetime
+    confirmed_at: datetime | None = None
+
+    asset_id: int
+    asset_symbol: str
+    asset_name: str
+
+    destination_id: int
+    destination_label: str
+    destination_type: str
+
+    address: str | None = None
+
+    bank_name: str | None = None
+    account_name: str | None = None
+    account_number: str | None = None
+
+
+class Withdraw(BaseModel):
+    user_id: int
+    asset_id: int
+    destination_id: int
+    amount: Decimal

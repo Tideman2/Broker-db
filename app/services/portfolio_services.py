@@ -7,8 +7,6 @@ from app.Models.portfolio_models import BuyInstrumentRequest, SellInstrumentRequ
 from app.db.queries.instrument_queries import GET_USER_INSTRUMENT_TRANSACTIONS, GROUP_USER_INSTRUMENT, GET_INSTRUMENT_RISK_WEIGHT
 from app.db.queries.transaction_queries import INSERT_BUY_TRANSACTION, INSERT_SELL_TRANSACTION
 
-# from app.utils.wallet_helpers import _debit_available, _credit_available
-
 from app.utils.wallet import (
     _credit_available,
     _debit_available

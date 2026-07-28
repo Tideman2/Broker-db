@@ -4,18 +4,6 @@ from fastapi import HTTPException
 
 from app.db.connection import get_connection
 
-# from app.utils.wallet_helpers import (
-#     _validate_amount,
-#     _validate_payment_method,
-#     _get_deposit_record,
-#     _validate_asset,
-#     _create_deposit_record,
-#     _build_deposit_response,
-#     _credit_available,
-#     _confirm_deposit_record,
-#     _reject_deposit_record
-# )
-
 from app.utils.wallet import (
     _validate_payment_method,
     _get_deposit_record,
@@ -25,10 +13,27 @@ from app.utils.wallet import (
     _credit_available,
     _confirm_deposit_record,
     _reject_deposit_record,
-    _validate_amount
+    _validate_amount,
+    _get_wallet,
+    _validate_available_balance,
+    _lock_funds,
+    _get_withdraw_destination,
+    _get_asset_by_symbol,
+    _create_withdraw_record,
+    _get_withdrawal_record,
+    _build_withdraw_response
 )
 
-from app.Models.wallet_models import DepositFundsRequest, DepositFundsResponse
+from app.Models.wallet_models import (
+    DepositFundsRequest,
+    DepositFundsResponse,
+    WithdrawFundsRequest,
+    Withdraw
+)
+
+# ======================================================
+# DEPOSITS
+# ======================================================
 
 
 def deposit_funds(
@@ -165,9 +170,13 @@ def reject_deposit(
         conn.close()
 
 
+# ======================================================
+# WITHDRAWALS
+# ======================================================
+
 def submit_withdrawal(
     user_id: int,
-    deposit_id: int
+    request: WithdrawFundsRequest
 ):
     """
     Submit funds withdrawal.
@@ -177,20 +186,39 @@ def submit_withdrawal(
     cursor = conn.cursor(dictionary=True)
 
     try:
+        wallet = _get_wallet(cursor, user_id)
+
         # Validate balance
-        confirmed_at = datetime.now(UTC)
-        _confirm_deposit_record(cursor, confirmed_at, deposit_id, user_id)
+        _validate_available_balance(request.amount, wallet["available"])
 
-        # Get confirmed deposit
-        deposit = _get_deposit_record(cursor, deposit_id)
+        # Increase locked balance and reduce available balance
+        _lock_funds(cursor, user_id, request.amount)
 
-        # Credit wallet
-        amount = deposit["amount"].quantize(Decimal("0.01"))
-        _credit_available(cursor, user_id, amount)
+        # Get withdraw destination
+        destination = _get_withdraw_destination(cursor, request.destination_id)
 
+        if destination["asset_id"] is None:
+            asset = _get_asset_by_symbol(cursor, "USDT")
+            asset_id = asset["id"]
+        else:
+            asset_id = destination["asset_id"]
+
+        # create withdrawal record
+        withdraw = Withdraw(
+            withdraw=Withdraw(
+                user_id=user_id,
+                asset_id=asset_id,
+                destination_id=request.destination_id,
+                amount=request.amount,
+            )
+        )
+
+        _create_withdraw_record(cursor, withdraw)
+        withdraw_id = cursor.lastrowid
+        withdraw = _get_withdrawal_record(cursor, withdraw_id)
         conn.commit()
 
-        return _build_deposit_response(deposit)
+        return _build_withdraw_response(withdraw)
 
     except HTTPException:
         conn.rollback()

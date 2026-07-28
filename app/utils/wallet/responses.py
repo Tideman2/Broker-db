@@ -2,7 +2,9 @@ from decimal import Decimal
 
 from app.Models.wallet_models import (
     DepositFundsResponse,
-    DepositStatus
+    DepositStatus,
+    WithdrawFundsResponse,
+    WithdrawStatus
 )
 
 
@@ -27,4 +29,32 @@ def _build_deposit_response(deposit: dict) -> DepositFundsResponse:
         bank_name=deposit["bank_name"],
         account_name=deposit["account_name"],
         account_number=deposit["account_number"],
+    )
+
+
+def _build_withdraw_response(
+    withdraw: dict
+) -> WithdrawFundsResponse:
+
+    return WithdrawFundsResponse(
+        id=withdraw["id"],
+        amount=withdraw["amount"].quantize(Decimal("0.01")),
+        status=WithdrawStatus[withdraw["status"]],
+
+        created_at=withdraw["created_at"],
+        confirmed_at=withdraw["confirmed_at"],
+
+        asset_id=withdraw["asset_id"],
+        asset_symbol=withdraw["asset_symbol"],
+        asset_name=withdraw["asset_name"],
+
+        destination_id=withdraw["destination_id"],
+        destination_label=withdraw["destination_label"],
+        destination_type=withdraw["destination_type"],
+
+        address=withdraw["address"],
+
+        bank_name=withdraw["bank_name"],
+        account_name=withdraw["account_name"],
+        account_number=withdraw["account_number"],
     )

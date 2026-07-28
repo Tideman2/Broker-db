@@ -2,7 +2,6 @@ CREATE TABLE IF NOT EXISTS withdrawals (
     id INT PRIMARY KEY AUTO_INCREMENT,
     user_id INT NOT NULL,
     asset_id INT NOT NULL,
-    payment_method_id INT NOT NULL,
     withdrawal_destination_id INT NOT NULL, 
 
     amount DECIMAL(20,8) NOT NULL,
@@ -21,10 +20,6 @@ CREATE TABLE IF NOT EXISTS withdrawals (
 
     FOREIGN KEY (user_id)
         REFERENCES users(id)
-        ON DELETE CASCADE,
-
-    FOREIGN KEY (payment_method_id)
-        REFERENCES payment_methods(id)
         ON DELETE CASCADE,
 
     FOREIGN KEY (asset_id)

@@ -2,6 +2,22 @@
 # WRITE
 # ============================
 
+INSERT_WITHDRAWAL_RECORD = """
+INSERT INTO withdrawals (
+   user_id,
+   asset_id,
+   withdrawal_destination_id,
+   amount,
+   status
+) VALUES (
+    %s,
+    %s,
+    %s,
+    %s,
+    "pending"
+)
+"""
+
 INSERT_WITHDRAW_DESTINATION = """
 INSERT INTO withdrawal_destination (
     user_id,
@@ -35,6 +51,7 @@ INSERT INTO bank_destinations (
 ) VALUES (
     %s,
     %s,
+    %s,
     %s
 )
 """
@@ -42,6 +59,51 @@ INSERT INTO bank_destinations (
 # ============================
 # READ
 # ============================
+
+GET_ASSET_BY_SYMBOL = """
+SELECT *
+FROM assets
+WHERE symbol = %s;
+"""
+
+GET_WITHDRAWAL_RECORD = """
+SELECT
+    w.id,
+    w.amount,
+    w.status,
+    w.confirmed_at,
+    w.created_at,
+
+    a.id AS asset_id,
+    a.symbol AS asset_symbol,
+    a.name AS asset_name,
+
+    wd.id AS destination_id,
+    wd.label AS destination_label,
+    wd.type AS destination_type,
+
+    cd.address,
+
+    bd.bank_name,
+    bd.account_name,
+    bd.account_number
+
+FROM withdrawals w
+
+JOIN assets a
+    ON w.asset_id = a.id
+
+JOIN withdrawal_destination wd
+    ON w.withdrawal_destination_id = wd.id
+
+LEFT JOIN crypto_destinations cd
+    ON wd.id = cd.withdrawal_destinations_id
+
+LEFT JOIN bank_destinations bd
+    ON wd.id = bd.withdrawal_destinations_id
+
+WHERE w.id = %s;
+"""
 
 GET_WITHDRAWAL_DESTINATION = """
 SELECT
@@ -142,7 +204,7 @@ JOIN withdrawal_destination wd
     ON cd.withdrawal_destinations_id = wd.id
 
 SET
-    cd.address = %s
+    cd.address = %s,
     cd.asset_id = %s
 
 WHERE wd.id = %s
