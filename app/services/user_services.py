@@ -225,3 +225,47 @@ def add_bank_withdraw_destination(user_id: int, destination: AddBankDestinationR
     finally:
         cursor.close()
         conn.close()
+
+
+def add_crypto_withdraw_destination(user_id: int, destination: AddCryptoDestinationRequest):
+    """
+    Add crypto withdraw destination
+    """
+
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    try:
+        label = destination.destination_details.label
+        destination_type = destination.destination_details.type
+
+        # Destination label is unique by user
+        _validate_destination_label(cursor, label, user_id)
+
+        # Add withdraw destination to db
+        _add_withdraw_destination(cursor, user_id, label, destination_type)
+
+        # Add crypto destination to db
+        destination_id = cursor.lastrowid
+        _add_crypto_destination(cursor, destination_id,
+                                destination.crypto_destination)
+
+        newly_created_destination = _get_withdraw_destination(
+            cursor, destination_id)
+        conn.commit()
+
+        return _build_destination_response(newly_created_destination)
+
+    except HTTPException:
+        conn.rollback()
+        raise
+
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        ) from e
+    finally:
+        cursor.close()
+        conn.close()
