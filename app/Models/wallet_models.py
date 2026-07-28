@@ -1,3 +1,4 @@
+from typing import Literal
 from enum import IntEnum, Enum
 from decimal import Decimal
 from pydantic import BaseModel
@@ -61,9 +62,14 @@ class DestinationType(str, Enum):
     BANK = "BANK"
 
 
-class DestinationDetails(BaseModel):
+class CryptoDestinationDetails(BaseModel):
     label: str
-    type: DestinationType
+    type: Literal["CRYPTO"]
+
+
+class BankDestinationDetails(BaseModel):
+    label: str
+    type: Literal["BANK"]
 
 
 class CryptoDestination(BaseModel):
@@ -78,13 +84,13 @@ class BankDestination(BaseModel):
 
 
 class AddBankDestinationRequest(BaseModel):
-    destination_details: DestinationDetails
+    destination_details: BankDestinationDetails
     bank_destination: BankDestination
 
 
 class AddCryptoDestinationRequest(BaseModel):
-    desination_details: DestinationDetails
-    destination: CryptoDestination
+    destination_details: CryptoDestinationDetails
+    crypto_destination: CryptoDestination
 
 
 class DestinationResponse(BaseModel):
