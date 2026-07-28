@@ -1,12 +1,32 @@
 from fastapi import HTTPException
 
 from app.db.connection import get_connection
-from app.Models.auth_models import User, CreateUserResponse, LoginUserRequest
-from app.db.queries.user_queries import INSERT_USER, INSERT_ADDRESS, GET_USER_BY_ID, GET_USER_BY_EMAIL
+from app.Models.auth_models import (
+    User,
+    CreateUserResponse,
+    LoginUserRequest
+)
+from app.Models.wallet_models import (
+    AddBankDestinationRequest,
+    AddCryptoDestinationRequest
+)
+from app.db.queries.user_queries import (
+    INSERT_USER,
+    INSERT_ADDRESS,
+    GET_USER_BY_ID,
+    GET_USER_BY_EMAIL
+)
 
 from app.utils.wallet import (
-    _create_wallet
+    _create_wallet,
+    _add_withdraw_destination,
+    _add_bank_destination,
+    _add_crypto_destination,
+    _get_withdraw_destination,
+    _validate_destination_label,
+    _build_destination_response
 )
+
 from app.utils.password import hash_password, verify_password
 from app.utils.jwt import create_token, decode_token
 
@@ -16,7 +36,7 @@ def create_user(data: User) -> CreateUserResponse:
      function that on boards a user to the system
     """
     conn = get_connection()
-    cursor = conn.cursor()
+    cursor = conn.cursor(dictionary=True)
 
     try:
         hashed_password = hash_password(password=data.password)
@@ -152,6 +172,49 @@ def delete_user(user_id: int):
         conn.commit()
 
         return {"message": "User deleted"}
+
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        ) from e
+    finally:
+        cursor.close()
+        conn.close()
+
+
+def add_bank_withdraw_destination(user_id: int, destination: AddBankDestinationRequest):
+    """
+    Add bank withdraw destination
+    """
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    try:
+        label = destination.destination_details.label
+        destination_type = destination.destination_details.type
+
+        # Destination label is unique by user
+        _validate_destination_label(cursor, label, user_id)
+
+        # Add withdraw destination to db
+        _add_withdraw_destination(cursor, user_id, label, destination_type)
+
+        # Add bank destination to db
+        destination_id = cursor.lastrowid
+        _add_bank_destination(cursor, destination_id,
+                              destination.bank_destination)
+
+        newly_created_destination = _get_withdraw_destination(
+            cursor, destination_id)
+        conn.commit()
+
+        return _build_destination_response(newly_created_destination)
+
+    except HTTPException:
+        conn.rollback()
+        raise
 
     except Exception as e:
         conn.rollback()

@@ -14,7 +14,9 @@ CREATE TABLE IF NOT EXISTS withdrawal_destination (
 
     FOREIGN KEY (user_id)
         REFERENCES users(id)
-        ON DELETE CASCADE
+        ON DELETE CASCADE,
+        
+    UNIQUE KEY uk_user_label (user_id, label)
 
 ) ENGINE=InnoDB
 DEFAULT CHARSET=utf8mb4

@@ -105,6 +105,13 @@ LEFT JOIN bank_destinations bd
 WHERE w.id = %s;
 """
 
+GET_WITHDRAW_DESTINATION_BY_LABEL = """
+SELECT *
+FROM withdrawal_destination
+WHERE label = %s
+AND user_id = %s
+"""
+
 GET_WITHDRAWAL_DESTINATION = """
 SELECT
     wd.id,

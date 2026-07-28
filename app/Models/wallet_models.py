@@ -56,9 +56,9 @@ class DepositFundsResponse(BaseModel):
 # ======================================================
 
 
-class DestinationType(IntEnum):
-    CRYPTO = 1
-    BANK = 2
+class DestinationType(str, Enum):
+    CRYPTO = "CRYPTO"
+    BANK = "BANK"
 
 
 class DestinationDetails(BaseModel):
@@ -79,7 +79,7 @@ class BankDestination(BaseModel):
 
 class AddBankDestinationRequest(BaseModel):
     destination_details: DestinationDetails
-    destination: BankDestination
+    bank_destination: BankDestination
 
 
 class AddCryptoDestinationRequest(BaseModel):
