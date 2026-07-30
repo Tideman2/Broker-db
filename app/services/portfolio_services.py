@@ -129,6 +129,8 @@ def sell_instrument(
             )
         )
 
+        transaction_id = cursor.lastrowid
+
         sales_proceeds = price * data.quantity
 
         _credit_available(cursor, user_id, sales_proceeds)
@@ -137,7 +139,7 @@ def sell_instrument(
 
         return {
             "message": "Instrument sold successfully.",
-            "transaction_id": cursor.lastrowid
+            "transaction_id": transaction_id
         }
 
     except HTTPException:
@@ -224,10 +226,10 @@ def get_portfolio_overview(user_id: int):
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
     try:
-        print("i ran 1")
+
         holdings = compute_holdings(user_id)
         portfolio_value = Decimal("0")
-        print("i ran 2")
+
         # Calculate portfolio value
         for holding in holdings:
             portfolio_value += holding["instrument_value"]
