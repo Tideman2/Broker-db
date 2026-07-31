@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS transactions (
 
     user_id INT NOT NULL,
     instrument_id INT NOT NULL,
+    subscription_id INT NULL,
 
     type ENUM(
         'BUY',
@@ -27,7 +28,12 @@ CREATE TABLE IF NOT EXISTS transactions (
 
     FOREIGN KEY (instrument_id)
         REFERENCES instruments(id)
-        ON DELETE CASCADE
+        ON DELETE CASCADE,
+    
+    FOREIGN KEY (subscription_id)
+    REFERENCES subscriptions(id)
+    ON DELETE SET NULL
+    
 ) ENGINE=InnoDB
 DEFAULT CHARSET=utf8mb4
 COLLATE=utf8mb4_0900_ai_ci;
