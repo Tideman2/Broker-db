@@ -43,6 +43,7 @@ class CreatePlanRequest(BaseModel):
 
 
 class UpdatePlanRequest(BaseModel):
+    plan_id: int
     plan: Plan
     features: list[str]
 

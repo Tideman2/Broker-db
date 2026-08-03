@@ -2,7 +2,9 @@ from decimal import Decimal
 from fastapi import HTTPException
 
 from app.db.queries.plans_queries import (
+    DELETE_PLAN_FEATURES,
     GET_PLAN,
+    GET_PLAN_BY_TITLE_EXCLUDING_ID,
     GET_PLANS,
     GET_PLAN_BY_TITLE,
     GET_PLAN_FEATURES,
@@ -182,6 +184,23 @@ def _get_plan_feature(
     return feature
 
 
+def _validate_plan_title_unique_for_update(
+    cursor,
+    plan_id: int,
+    title: str
+):
+    cursor.execute(
+        GET_PLAN_BY_TITLE_EXCLUDING_ID,
+        (title, plan_id)
+    )
+
+    if cursor.fetchone():
+        raise HTTPException(
+            status_code=400,
+            detail="A plan with this title already exists."
+        )
+
+
 # ============================
 # Writes
 # ============================
@@ -251,12 +270,6 @@ def _update_plan(
             plan_id,
         )
     )
-
-    if cursor.rowcount == 0:
-        raise HTTPException(
-            status_code=404,
-            detail="Plan not found."
-        )
 
 
 def _activate_plan(
@@ -346,6 +359,13 @@ def _delete_plan_feature(
             status_code=404,
             detail="Feature not found."
         )
+
+
+def _delete_plan_features(cursor, plan_id: int):
+    cursor.execute(
+        DELETE_PLAN_FEATURES,
+        (plan_id,)
+    )
 
 
 def _delete_plan(

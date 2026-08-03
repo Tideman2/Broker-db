@@ -70,6 +70,12 @@ FROM plan_features
 WHERE id = %s;
 """
 
+DELETE_PLAN_FEATURES = """
+DELETE
+FROM plan_features
+WHERE plan_id = %s;
+"""
+
 DELETE_PLAN = """
 DELETE p
 FROM plans p
@@ -140,4 +146,11 @@ GET_PLAN_BY_TITLE = """
 SELECT *
 FROM plans
 WHERE title = %s
+"""
+
+GET_PLAN_BY_TITLE_EXCLUDING_ID = """
+SELECT *
+FROM plans
+WHERE title = %s
+AND id <> %s;
 """
