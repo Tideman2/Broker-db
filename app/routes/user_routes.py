@@ -32,7 +32,7 @@ def add_bank_destination_endpoint(
     Add bank destination endpoint.
     """
     return add_bank_withdraw_destination(
-        user_id=user["user_id"],
+        user_id=user.user_id,
         destination=request
     )
 
@@ -50,6 +50,6 @@ def add_crypto_destination_endpoint(
     """
 
     return add_crypto_withdraw_destination(
-        user_id=user["user_id"],
+        user_id=user.user_id,
         destination=request
     )

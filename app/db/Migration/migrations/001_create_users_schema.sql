@@ -19,6 +19,10 @@ CREATE TABLE IF NOT EXISTS users (
     password_hash VARCHAR(256) NOT NULL,
 
     PRIMARY KEY (id),
+    role ENUM(
+        'USER',
+        'ADMIN'
+    ) NOT NULL DEFAULT 'USER',
 
     UNIQUE KEY email (email),
     UNIQUE KEY phone (phone),

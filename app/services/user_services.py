@@ -3,9 +3,11 @@ from fastapi import HTTPException
 from app.db.connection import get_connection
 from app.Models.auth_models import (
     User,
+    Admin,
     CreateUserResponse,
     LoginUserRequest
 )
+
 from app.Models.wallet_models import (
     AddBankDestinationRequest,
     AddCryptoDestinationRequest
@@ -15,6 +17,11 @@ from app.db.queries.user_queries import (
     INSERT_ADDRESS,
     GET_USER_BY_ID,
     GET_USER_BY_EMAIL
+)
+
+from app.db.queries.admin_queries import (
+    GET_ADMIN_BY_EMAIL,
+    INSERT_ADMIN
 )
 
 from app.utils.wallet import (
@@ -68,7 +75,7 @@ def create_user(data: User) -> CreateUserResponse:
         _create_wallet(cursor, user_id)
 
         conn.commit()
-        access_token = create_token(user_id, data.full_name)
+        access_token = create_token(user_id, "USER")
         return {"id": user_id, "message": "User created", "token": access_token}
 
     except Exception as e:
@@ -131,7 +138,7 @@ def check_if_email_and_password_is_correct(data: LoginUserRequest):
                 detail="Password is incorrect"
             )
 
-        accsse_token = create_token(user["id"], user["full_name"])
+        accsse_token = create_token(user["id"], user["role"])
         return {"user_id": user["id"], "token": accsse_token}
 
     except HTTPException:
@@ -155,8 +162,8 @@ def generate_new_token(token: str) -> str:
     """
     user = decode_token(token)
     user_id = user["user_id"]
-    full_name = user["name"]
-    token = create_token(user_id, full_name)
+    role = user["role"]
+    token = create_token(user_id, role)
     return token
 
 
@@ -231,7 +238,7 @@ def add_crypto_withdraw_destination(user_id: int, destination: AddCryptoDestinat
     """
     Add crypto withdraw destination
     """
-
+    print("Whaaaaaaatttstst")
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
 
@@ -262,6 +269,87 @@ def add_crypto_withdraw_destination(user_id: int, destination: AddCryptoDestinat
 
     except Exception as e:
         conn.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        ) from e
+    finally:
+        cursor.close()
+        conn.close()
+
+
+# ============================
+# Admin
+# ============================
+
+
+def create_admin(data: Admin) -> CreateUserResponse:
+    """
+    function that on boards an admon to the system
+    """
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    try:
+        hashed_password = hash_password(password=data.password)
+        # Insert Admin
+        cursor.execute(INSERT_ADMIN, (
+            data.email,
+            hashed_password,
+        ))
+
+        admin_id = cursor.lastrowid
+
+        conn.commit()
+        access_token = create_token(admin_id, "ADMIN")
+        return {"id": admin_id, "message": "Admin created", "token": access_token}
+
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        ) from e
+
+    finally:
+        cursor.close()
+        conn.close()
+
+
+def check_if_admin_email_and_password_is_correct(data: LoginUserRequest):
+    """
+    function to check if email is in db,
+    and check password agaisnt hashed in db.
+    """
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute(GET_ADMIN_BY_EMAIL, (data.email,))
+        admin = cursor.fetchone()
+
+        if not admin:
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid credentials"
+            )
+
+        admin_exists = verify_password(data.password, admin["password_hash"])
+        if not admin_exists:
+            raise HTTPException(
+                status_code=401,
+                detail="Password is incorrect"
+            )
+
+        accesse_token = create_token(
+            admin["id"], admin["role"])
+        return {"token": accesse_token}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        conn.rollback()
+        print(e)
         raise HTTPException(
             status_code=500,
             detail=str(e)

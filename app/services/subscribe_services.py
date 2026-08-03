@@ -1,4 +1,3 @@
-from decimal import Decimal
 from datetime import datetime, timedelta, UTC
 from fastapi import HTTPException
 
@@ -8,6 +7,7 @@ from app.Models.plans_models import (
     SubscribeRequest,
     Subscription
 )
+
 from app.utils.plans import (
     _create_subscription,
     _validate_active_plan,

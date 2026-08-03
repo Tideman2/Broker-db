@@ -39,7 +39,7 @@ def buy(
     Buy an instrument.
     """
     return buy_instrument(
-        user_id=user["user_id"],
+        user_id=user.user_id,
         data=request
     )
 
@@ -56,7 +56,7 @@ def sell(
     Sell an instrument.
     """
     return sell_instrument(
-        user_id=user["user_id"],
+        user_id=user.user_id,
         data=request
     )
 
@@ -66,8 +66,9 @@ def get_holdings(user=Depends(get_current_user)):
     """
     Get holdings
     """
+    print("We got started")
     return compute_holdings(
-        user_id=user["user_id"],
+        user_id=user.user_id,
     )
 
 
@@ -78,7 +79,7 @@ def portfolio_overview(user=Depends(get_current_user)):
     """
 
     return get_portfolio_overview(
-        user_id=user["user_id"],
+        user_id=user.user_id,
     )
 
 
@@ -88,4 +89,4 @@ def portfolio_profit_loss(user=Depends(get_current_user)):
     Get portfolio profit and loss breakdown for each instrument 
     and total for whole portfolio
     """
-    return get_portfolio_profit_loss(user_id=user["user_id"])
+    return get_portfolio_profit_loss(user_id=user.user_id)

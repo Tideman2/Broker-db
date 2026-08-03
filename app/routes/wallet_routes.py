@@ -39,7 +39,7 @@ def deposit_endpoint(
     Deposit funds.
     """
     return deposit_funds(
-        user_id=user["user_id"],
+        user_id=user.user_id,
         data=request
     )
 
@@ -56,7 +56,7 @@ def confirm_deposit_endpoint(
     Confirm a deposit.
     """
     return confirm_deposit(
-        user_id=user["user_id"],
+        user_id=user.user_id,
         deposit_id=deposit_id
     )
 
@@ -73,7 +73,7 @@ def reject_deposit_endpoint(
     Reject a deposit.
     """
     return reject_deposit(
-        user_id=user["user_id"],
+        user_id=user.user_id,
         deposit_id=deposit_id
     )
 
@@ -94,6 +94,6 @@ def withdraw_endpoint(
     Withdraw funds.
     """
     return submit_withdrawal(
-        user_id=user["user_id"],
+        user_id=user.user_id,
         request=request
     )
