@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from typing import List
 
-from app.services.subscribe_services import (
+from app.services.subscription_services import (
     subscribe_to_a_plan
 )
 from app.Models.plans_models import (

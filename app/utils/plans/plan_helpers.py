@@ -4,6 +4,7 @@ from fastapi import HTTPException
 from app.db.queries.plans_queries import (
     GET_PLAN,
     GET_PLANS,
+    GET_PLAN_BY_TITLE,
     GET_PLAN_FEATURES,
     GET_PLAN_FEATURE,
     GET_PLAN_FEATURE_BY_NAME,
@@ -97,6 +98,14 @@ def _validate_plan_feature_unique(
         )
 
 
+def _validate_positive(value, field: str):
+    if value <= 0:
+        raise HTTPException(
+            status_code=400,
+            detail=f"{field} must be greater than zero."
+        )
+
+
 # ============================
 # Reads
 # ============================
@@ -105,8 +114,22 @@ def _get_plan(cursor, plan_id: int):
     """
     Fetch a plan.
     """
-
     return _validate_plan(cursor, plan_id)
+
+
+def _validate_plan_title_is_unique(cursor, title: str):
+    """
+    Fetch and validate plan title is unique
+    """
+
+    cursor.execute(GET_PLAN_BY_TITLE, (title,))
+    plan = cursor.fetchone()
+
+    if plan:
+        raise HTTPException(
+            status_code=401,
+            detail="Plan title already used."
+        )
 
 
 def _get_plans(cursor):

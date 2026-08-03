@@ -135,3 +135,9 @@ FROM plans
 WHERE id = %s
 AND status = 'ACTIVE';
 """
+
+GET_PLAN_BY_TITLE = """
+SELECT *
+FROM plans
+WHERE title = %s
+"""
