@@ -1,5 +1,24 @@
+from enum import Enum
 from pydantic import BaseModel, Field, EmailStr
 from typing import Optional, TypedDict
+
+
+class UserRole(str, Enum):
+    USER = "USER"
+    ADMIN = "ADMIN"
+
+
+class Admin(BaseModel):
+    email: str
+    password: str = Field(
+        min_length=8,
+        max_length=100
+    )
+
+
+class CurrentUser(BaseModel):
+    user_id: int
+    role: UserRole
 
 
 class User(BaseModel):

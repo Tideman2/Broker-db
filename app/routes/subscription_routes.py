@@ -9,7 +9,7 @@ from app.Models.plans_models import (
     SubscriptionResponse
 )
 
-from app.utils.jwt import get_current_user
+from app.utils.jwt import get_current_user, require_admin
 
 
 subscription_router = APIRouter(
@@ -30,6 +30,6 @@ def subscribe(
     Subscribe to a plan.
     """
     return subscribe_to_a_plan(
-        user_id=user["user_id"],
+        user_id=user.user_id,
         data=request
     )

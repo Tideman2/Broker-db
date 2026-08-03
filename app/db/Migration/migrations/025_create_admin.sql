@@ -1,0 +1,14 @@
+CREATE TABLE admins (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+
+    email VARCHAR(255) NOT NULL UNIQUE,
+
+    password_hash VARCHAR(255) NOT NULL,
+
+    role ENUM(
+        'USER',
+        'ADMIN'
+    ) NOT NULL DEFAULT 'ADMIN',
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
