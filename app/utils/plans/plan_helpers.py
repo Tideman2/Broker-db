@@ -2,8 +2,11 @@ from decimal import Decimal
 from fastapi import HTTPException
 
 from app.db.queries.plans_queries import (
+    DELETE_PLAN_FEATURES,
     GET_PLAN,
+    GET_PLAN_BY_TITLE_EXCLUDING_ID,
     GET_PLANS,
+    GET_PLAN_BY_TITLE,
     GET_PLAN_FEATURES,
     GET_PLAN_FEATURE,
     GET_PLAN_FEATURE_BY_NAME,
@@ -97,6 +100,14 @@ def _validate_plan_feature_unique(
         )
 
 
+def _validate_positive(value, field: str):
+    if value <= 0:
+        raise HTTPException(
+            status_code=400,
+            detail=f"{field} must be greater than zero."
+        )
+
+
 # ============================
 # Reads
 # ============================
@@ -105,8 +116,22 @@ def _get_plan(cursor, plan_id: int):
     """
     Fetch a plan.
     """
-
     return _validate_plan(cursor, plan_id)
+
+
+def _validate_plan_title_is_unique(cursor, title: str):
+    """
+    Fetch and validate plan title is unique
+    """
+
+    cursor.execute(GET_PLAN_BY_TITLE, (title,))
+    plan = cursor.fetchone()
+
+    if plan:
+        raise HTTPException(
+            status_code=401,
+            detail="Plan title already used."
+        )
 
 
 def _get_plans(cursor):
@@ -157,6 +182,23 @@ def _get_plan_feature(
         )
 
     return feature
+
+
+def _validate_plan_title_unique_for_update(
+    cursor,
+    plan_id: int,
+    title: str
+):
+    cursor.execute(
+        GET_PLAN_BY_TITLE_EXCLUDING_ID,
+        (title, plan_id)
+    )
+
+    if cursor.fetchone():
+        raise HTTPException(
+            status_code=400,
+            detail="A plan with this title already exists."
+        )
 
 
 # ============================
@@ -228,12 +270,6 @@ def _update_plan(
             plan_id,
         )
     )
-
-    if cursor.rowcount == 0:
-        raise HTTPException(
-            status_code=404,
-            detail="Plan not found."
-        )
 
 
 def _activate_plan(
@@ -323,6 +359,13 @@ def _delete_plan_feature(
             status_code=404,
             detail="Feature not found."
         )
+
+
+def _delete_plan_features(cursor, plan_id: int):
+    cursor.execute(
+        DELETE_PLAN_FEATURES,
+        (plan_id,)
+    )
 
 
 def _delete_plan(

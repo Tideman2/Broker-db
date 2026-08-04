@@ -115,7 +115,15 @@ def _get_active_subscription(
         )
     )
 
-    return cursor.fetchone()
+    subscription = cursor.fetchone()
+
+    if not subscription:
+        raise HTTPException(
+            status_code=401,
+            detail="Only active subscription can be cancelled."
+        )
+
+    return subscription
 
 
 def _validate_no_active_subscription(

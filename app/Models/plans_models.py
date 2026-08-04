@@ -43,6 +43,7 @@ class CreatePlanRequest(BaseModel):
 
 
 class UpdatePlanRequest(BaseModel):
+    plan_id: int
     plan: Plan
     features: list[str]
 
@@ -81,20 +82,13 @@ class PlansResponse(BaseModel):
 
 class SubscriptionResponse(BaseModel):
     id: int
-
     user_id: int
-
     plan_id: int
     plan_title: str
-
     invested_amount: Decimal
-
     expiration_date: datetime
-
     status: SubscriptionStatus
-
     created_at: datetime
-    updated_at: datetime
 
 
 class SubscriptionsResponse(BaseModel):

@@ -11,8 +11,9 @@ def _build_subscription_response(
 
     return SubscriptionResponse(
         id=subscription["id"],
+        user_id=subscription["user_id"],
         plan_id=subscription["plan_id"],
-        plan_name=subscription["plan_name"],
+        plan_title=subscription["title"],
         invested_amount=subscription["invested_amount"].quantize(
             Decimal("0.01")
         ),
