@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from typing import List
 
-from app.utils.jwt import get_current_user
+from app.utils.jwt import get_current_user, require_admin
 
 from app.services.wallet_services import (
     deposit_funds,
@@ -50,7 +50,7 @@ def deposit_endpoint(
 )
 def confirm_deposit_endpoint(
     deposit_id: int,
-    user=Depends(get_current_user)
+    user=Depends(require_admin)
 ):
     """
     Confirm a deposit.
@@ -67,7 +67,7 @@ def confirm_deposit_endpoint(
 )
 def reject_deposit_endpoint(
     deposit_id: int,
-    user=Depends(get_current_user)
+    user=Depends(require_admin)
 ):
     """
     Reject a deposit.

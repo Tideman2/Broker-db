@@ -596,7 +596,7 @@
     </mxGraphModel>
   </diagram>
   <diagram id="MwYcBFJrR1TCon8PMCvn" name="Page-6">
-    <mxGraphModel dx="827" dy="665" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+    <mxGraphModel dx="925" dy="744" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -684,7 +684,7 @@
         <mxCell id="v7aVueCRaXUEQ6H8SP76-1" value="&lt;font style=&quot;font-size: 16px;&quot;&gt;&lt;b&gt;Background Worker — Expire Subscriptions&lt;/b&gt;&lt;/font&gt;" style="text;whiteSpace=wrap;html=1;" vertex="1" parent="1">
           <mxGeometry x="860" y="3150" width="340" height="40" as="geometry" />
         </mxCell>
-        <mxCell id="v7aVueCRaXUEQ6H8SP76-2" value="Runs automatically.&lt;br&gt;&lt;br&gt;&lt;br&gt;1. Find subscriptions where&lt;br&gt;&lt;br&gt;&lt;br&gt;&amp;nbsp; &amp;nbsp;expires_at &amp;lt;= NOW()&lt;br&gt;&lt;br&gt;&lt;br&gt;2. Status must be COMPLETED.&lt;br&gt;&lt;br&gt;&lt;br&gt;3. Update status to EXPIRED.&lt;br&gt;&lt;br&gt;&lt;br&gt;4. Commit transaction." style="whiteSpace=wrap;html=1;" vertex="1" parent="1">
+        <mxCell id="v7aVueCRaXUEQ6H8SP76-2" value="Runs automatically.&lt;br&gt;&lt;br&gt;&lt;br&gt;1. Find subscriptions where&lt;br&gt;&lt;br&gt;&lt;br&gt;&amp;nbsp; &amp;nbsp;expires_at &amp;lt;= NOW()&lt;br&gt;&lt;br&gt;&lt;br&gt;2. Status must be COMPLETED.&lt;div&gt;&lt;br&gt;4. Commit transaction.&lt;/div&gt;" style="whiteSpace=wrap;html=1;" vertex="1" parent="1">
           <mxGeometry x="870" y="3210" width="430" height="250" as="geometry" />
         </mxCell>
         <UserObject label="Principal = subscription.amount&#xa;&#xa;&#xa;ProfitLoss = Calculated from transactions&#xa;&#xa;&#xa;CurrentValue = Principal + ProfitLoss" link="Principal = subscription.amount&#xa;&#xa;&#xa;ProfitLoss = Calculated from transactions&#xa;&#xa;&#xa;CurrentValue = Principal + ProfitLoss" id="wAfdRSfAOqG_9RD5NJzW-3">

@@ -1,9 +1,10 @@
 from fastapi import APIRouter, Depends
-from typing import List
 
 from app.services.subscription_services import (
+    cancel_subscription,
     subscribe_to_a_plan
 )
+
 from app.Models.plans_models import (
     SubscribeRequest,
     SubscriptionResponse
@@ -32,4 +33,21 @@ def subscribe(
     return subscribe_to_a_plan(
         user_id=user.user_id,
         data=request
+    )
+
+
+@subscription_router.post(
+    "/cancel/{subscription_id}",
+    response_model=SubscriptionResponse
+)
+def cancel(
+    subscription_id: int,
+    user=Depends(get_current_user)
+):
+    """
+    Cancel a subscription.
+    """
+    return cancel_subscription(
+        user_id=user.user_id,
+        subscription_id=subscription_id
     )

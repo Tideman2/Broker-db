@@ -89,12 +89,12 @@ def subscribe_to_a_plan(
         conn.close()
 
 
-def cancle_subscription(
+def cancel_subscription(
         user_id: int,
         subscription_id: int
 ):
     """
-    Cancle a subscription.
+    Cancel a subscription.
     """
 
     conn = get_connection()
