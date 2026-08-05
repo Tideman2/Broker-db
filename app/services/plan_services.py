@@ -93,7 +93,6 @@ def update_plan(
     cursor = conn.cursor(dictionary=True)
 
     try:
-        print(f"Updating plan with ID: {request.plan_id}")
         plan_id = request.plan_id
         # Plan must exist.
         _validate_plan(cursor, plan_id)

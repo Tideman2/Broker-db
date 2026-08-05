@@ -123,10 +123,8 @@ def _validate_plan_title_is_unique(cursor, title: str):
     """
     Fetch and validate plan title is unique
     """
-
     cursor.execute(GET_PLAN_BY_TITLE, (title,))
     plan = cursor.fetchone()
-
     if plan:
         raise HTTPException(
             status_code=401,

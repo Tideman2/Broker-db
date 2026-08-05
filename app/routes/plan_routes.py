@@ -45,7 +45,6 @@ def update_plan_endpoint(
     """
     Update an existing plan.
     """
-    print(f"Received request to update plan with ID: {request.plan_id}")
     return update_plan(
         user_id=user.user_id,
         request=request
