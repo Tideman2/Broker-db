@@ -21,13 +21,14 @@ def ensure_migrations_table(cursor):
         print(f"Failed creating schema_migration table: {err}")
 
 
-def read_schema_migration_table():
+def read_schema_migration_table(connection=None):
     """
     Orchestrator for executing migrations script that 
     have not been applied yet
     """
     try:
-        connection = get_connection()
+        if connection is None:
+            connection = get_connection()
         cursor = connection.cursor()
 
         # ensure table exists
@@ -56,7 +57,6 @@ def read_schema_migration_table():
             run_sql_file(
                 cursor=cursor, sql="INSERT INTO schema_migrations (version, applied_at) VALUES (%s, NOW())", args=(version,))
             connection.commit()
-            print("Hello i ran")
 
         print("successfully ran migrations")
     except mysql.connector.Error as err:

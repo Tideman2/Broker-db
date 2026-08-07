@@ -14,3 +14,14 @@ def get_connection():
         password=os.getenv('DB_CONNECTION_PASSWORD'),
         database=os.getenv('DB_NAME'),
     )
+
+
+def get_test_connection():
+    """To get test db engine and connection."""
+    return mysql.connector.connect(
+        host="localhost",
+        user="root",
+        autocommit=False,
+        password=os.getenv('TEST_DB_CONNECTION_PASSWORD'),
+        database=os.getenv('TEST_DB_NAME'),
+    )

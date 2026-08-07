@@ -1,4 +1,4 @@
-<mxfile host="Electron" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/28.2.5 Chrome/138.0.7204.251 Electron/37.6.1 Safari/537.36" version="28.2.5" pages="6">
+<mxfile host="Electron" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/28.2.5 Chrome/138.0.7204.251 Electron/37.6.1 Safari/537.36" version="28.2.5" pages="7">
   <diagram name="Page-1" id="B_cyh9FVUIGtIR2y1V8l">
     <mxGraphModel dx="925" dy="744" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
       <root>
@@ -702,6 +702,20 @@
         </UserObject>
         <mxCell id="wAfdRSfAOqG_9RD5NJzW-7" value="&lt;span style=&quot;white-space: pre;&quot;&gt;&#x9;&lt;/span&gt;&lt;span style=&quot;white-space: pre;&quot;&gt;&#x9;&lt;/span&gt;&lt;font style=&quot;font-size: 17px;&quot;&gt;&lt;b&gt;On expiration/cancllation&lt;/b&gt;&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
           <mxGeometry x="1330" y="3155" width="280" height="30" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="EUI40wGHNvBzNPQyaksP" name="Page-7">
+    <mxGraphModel dx="1310" dy="1053" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="Kgkkwa_UzT5FgOSKU8uW-1" value="&lt;li data-section-id=&quot;ybpzog&quot; data-start=&quot;3355&quot; data-end=&quot;3417&quot;&gt;&lt;font style=&quot;font-size: 19px;&quot;&gt;✅ Finish remaining business logic&lt;/font&gt;&lt;/li&gt;&lt;li data-section-id=&quot;ti4yfh&quot; data-start=&quot;3418&quot; data-end=&quot;3450&quot;&gt;&lt;font style=&quot;font-size: 19px;&quot;&gt;&lt;br&gt;&lt;strong data-start=&quot;3421&quot; data-end=&quot;3450&quot;&gt;Write comprehensive tests&lt;/strong&gt;&lt;br&gt;&lt;/font&gt;&lt;/li&gt;&lt;font style=&quot;font-size: 19px;&quot;&gt;&lt;br&gt;&lt;/font&gt;&lt;li data-section-id=&quot;1jyp2zm&quot; data-start=&quot;3451&quot; data-end=&quot;3535&quot;&gt;&lt;font style=&quot;font-size: 19px;&quot;&gt;&lt;br&gt;&lt;strong data-start=&quot;3454&quot; data-end=&quot;3486&quot;&gt;Implement background workers&lt;/strong&gt; (subscription expiry, settlement, notifications)&lt;br&gt;&lt;/font&gt;&lt;/li&gt;&lt;font style=&quot;font-size: 19px;&quot;&gt;&lt;br&gt;&lt;/font&gt;&lt;li data-section-id=&quot;hxxzb2&quot; data-start=&quot;3536&quot; data-end=&quot;3560&quot;&gt;&lt;font style=&quot;font-size: 19px;&quot;&gt;&lt;br&gt;&lt;strong data-start=&quot;3539&quot; data-end=&quot;3560&quot;&gt;Add Redis caching&lt;/strong&gt;&lt;br&gt;&lt;/font&gt;&lt;/li&gt;&lt;font style=&quot;font-size: 19px;&quot;&gt;&lt;br&gt;&lt;/font&gt;&lt;li data-section-id=&quot;1tlxmqo&quot; data-start=&quot;3561&quot; data-end=&quot;3606&quot;&gt;&lt;font style=&quot;font-size: 19px;&quot;&gt;&lt;br&gt;&lt;strong data-start=&quot;3564&quot; data-end=&quot;3606&quot;&gt;Replace prints with structured logging&lt;/strong&gt;&lt;br&gt;&lt;/font&gt;&lt;/li&gt;&lt;font style=&quot;font-size: 19px;&quot;&gt;&lt;br&gt;&lt;/font&gt;&lt;li data-section-id=&quot;1vfi0nx&quot; data-start=&quot;3607&quot; data-end=&quot;3651&quot;&gt;&lt;font style=&quot;font-size: 19px;&quot;&gt;&lt;br&gt;Add pagination and filtering where needed&lt;br&gt;&lt;/font&gt;&lt;/li&gt;&lt;font style=&quot;font-size: 19px;&quot;&gt;&lt;br&gt;&lt;/font&gt;&lt;li data-section-id=&quot;1t2wo3b&quot; data-start=&quot;3652&quot; data-end=&quot;3679&quot;&gt;&lt;font style=&quot;font-size: 19px;&quot;&gt;&lt;br&gt;Polish API documentation&lt;br&gt;&lt;/font&gt;&lt;/li&gt;&lt;font style=&quot;font-size: 19px;&quot;&gt;&lt;br&gt;&lt;/font&gt;&lt;li data-section-id=&quot;1w8pqd2&quot; data-start=&quot;3680&quot; data-end=&quot;3695&quot;&gt;&lt;font style=&quot;font-size: 19px;&quot;&gt;&lt;br&gt;Set up CI/CD&lt;br&gt;&lt;/font&gt;&lt;/li&gt;&lt;font style=&quot;font-size: 19px;&quot;&gt;&lt;br&gt;&lt;/font&gt;&lt;li data-section-id=&quot;1jyj6s3&quot; data-start=&quot;3696&quot; data-end=&quot;3731&quot;&gt;&lt;font style=&quot;font-size: 19px;&quot;&gt;&lt;br&gt;Profile and optimize performance&lt;/font&gt;&lt;/li&gt;" style="text;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="120" width="450" height="650" as="geometry" />
+        </mxCell>
+        <mxCell id="C67p9dc7IZIBpA7HFd0t-1" value="&lt;span style=&quot;font-size: 26px;&quot;&gt;Road map to full working system (Production grade)&lt;/span&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=25;fontStyle=5" vertex="1" parent="1">
+          <mxGeometry x="100" y="40" width="620" height="40" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>
