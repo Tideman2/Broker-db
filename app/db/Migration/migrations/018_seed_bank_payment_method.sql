@@ -5,7 +5,7 @@ INSERT INTO bank_payment_methods (
     account_number
 ) VALUES (
     2,
-   "Opay",
-   "Isaac Oghenekaro Mark",
-   "8162326786"
+   'Opay',
+   'Isaac Oghenekaro Mark',
+   '8162326786'
 );
