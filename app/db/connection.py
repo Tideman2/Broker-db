@@ -4,7 +4,7 @@ import mysql.connector
 
 load_dotenv()
 
-RUN_TEST = False if os.getenv("RUN_TEST") == "False" else True
+RUN_TEST = os.getenv("RUN_TEST", "False").lower() == "true"
 
 
 def get_connection():
