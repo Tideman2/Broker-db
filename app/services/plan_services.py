@@ -34,6 +34,11 @@ def create_plan(
     cursor = conn.cursor(dictionary=True)
 
     try:
+        # Admin must exist.
+        cursor.execute("SELECT id FROM admins WHERE id = %s", (user_id,))
+        if not cursor.fetchone():
+            raise HTTPException(status_code=404, detail="Admin not found")
+
         # Title must be unique.
         _validate_plan_title_is_unique(cursor, request.plan.title)
 
