@@ -6,9 +6,9 @@ CREATE TABLE IF NOT EXISTS deposits (
 
     amount DECIMAL(20,8) NOT NULL,
     status ENUM(
-      "pending",
-      "confirmed",
-      "rejected"
+      'pending',
+      'confirmed',
+      'rejected'
     ) NOT NULL,
 
     confirmed_at TIMESTAMP,
