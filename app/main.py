@@ -1,4 +1,8 @@
+import os
+
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
 from app.routes.auth_routes import auth_router
 from app.routes.admin_routes import admin_router
 from app.routes.portfolio_routes import portfolio_router
@@ -9,6 +13,20 @@ from app.routes.plan_routes import plan_router
 
 
 app = FastAPI()
+
+origins = os.getenv(
+    "ALLOWED_ORIGINS",
+    "*"
+).split(",")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 app.include_router(auth_router)
 app.include_router(portfolio_router)
 app.include_router(wallet_router)

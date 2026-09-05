@@ -2,6 +2,7 @@ CREATE TABLE IF NOT EXISTS user_addresses (
     id INT PRIMARY KEY AUTO_INCREMENT,
     user_id INT NOT NULL,
     
+    country VARCHAR(255) NOT NULL,
     city VARCHAR(255) NOT NULL,
     state VARCHAR(255) NOT NULL,
     
