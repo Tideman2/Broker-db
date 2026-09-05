@@ -63,6 +63,26 @@ class User(BaseModel):
     marketing_opt_in: Optional[bool] = False
 
 
+class UserResponse(BaseModel):
+    """
+    Safe user information returned by the API.
+    Never includes sensitive information such as passwords.
+    """
+    id: int
+    country: str
+    email: EmailStr
+    full_name: str
+    phone: str
+    dob: Optional[str] = None
+    username: Optional[str] = None
+    address1: str
+    address2: Optional[str] = None
+    city: str
+    state: str
+    zip: str
+    role: UserRole
+
+
 class CreateUserResponse(TypedDict):
     """
      Create user service response type

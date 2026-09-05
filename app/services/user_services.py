@@ -5,7 +5,8 @@ from app.Models.auth_models import (
     User,
     Admin,
     CreateUserResponse,
-    LoginUserRequest
+    LoginUserRequest,
+    UserResponse
 )
 
 from app.Models.wallet_models import (
@@ -68,7 +69,8 @@ def create_user(data: User) -> CreateUserResponse:
             data.address2,
             data.city,
             data.state,
-            data.zip
+            data.zip,
+            data.country
         ))
 
         # Create wallet for user
@@ -100,7 +102,22 @@ def get_user(user_id) -> User:
 
         cursor.execute(GET_USER_BY_ID, (user_id,))
         user = cursor.fetchone()
-        return user
+
+        return UserResponse(
+            id=user["user_id"],
+            country=user["country"],
+            email=user["email"],
+            full_name=user["full_name"],
+            phone=user["phone"],
+            dob=user["dob"].strftime("%Y-%m-%d"),
+            username=user["username"],
+            address1=user["address1"],
+            address2=user["address2"],
+            city=user["city"],
+            state=user["state"],
+            zip=user["zip"],
+            role=user["role"]
+        )
 
     except Exception as e:
         conn.rollback()

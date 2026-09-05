@@ -30,14 +30,15 @@ def login_user(payload: LoginUserRequest):
     return response
 
 
-@auth_router.get("/user/{user_id}")
-def fetch_user(user_id: int, user=Depends(get_current_user)):
+@auth_router.get("/user")
+def fetch_user(user=Depends(get_current_user)):
     """
      Route handler to get user,
      this function will also validate the incoming payload
      and enforce jwt auth
     """
-    return user_services.get_user(user_id)
+
+    return user_services.get_user(user_id=user.user_id)
 
 
 @auth_router.post("/refresh")
@@ -49,11 +50,11 @@ def refresh_token(data: RefreshTokenRequest, user=Depends(get_current_user)):
     return {"token": new_token}
 
 
-@auth_router.delete("/user/{user_id}")
-def delete_user(user_id: int, user=Depends(get_current_user)):
+@auth_router.delete("/user")
+def delete_user(user=Depends(get_current_user)):
     """
      Route handler to delete user,
      this function will also validate the incoming payload
      and enforce jwt auth
     """
-    return user_services.delete_user(user_id)
+    return user_services.delete_user(user_id=user.user_id)
