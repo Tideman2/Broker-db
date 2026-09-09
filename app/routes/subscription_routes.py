@@ -10,7 +10,7 @@ from app.Models.plans_models import (
     SubscriptionResponse
 )
 
-from app.utils.jwt import get_current_user, require_admin
+from app.utils.jwt import get_current_user
 
 
 subscription_router = APIRouter(

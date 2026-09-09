@@ -1,5 +1,4 @@
 from fastapi import APIRouter, Depends
-from typing import List
 
 from app.utils.jwt import get_current_user, require_admin
 

@@ -1,8 +1,11 @@
-
 from fastapi import APIRouter, Depends
+
+from app.email import email_service
+
 from app.services import user_services
 from app.Models.auth_models import User, LoginUserRequest, RefreshTokenRequest
 from app.utils.jwt import get_current_user
+
 
 auth_router = APIRouter(
     prefix="/auth",
@@ -17,6 +20,20 @@ def register_user(payload: User):
      this function will also validate the incoming payload
     """
     response = user_services.create_user(payload)
+    email_service.send_email(
+        to=payload.email,
+        subject="Welcome!",
+        body=(
+            f"Welcome to the platform, "
+            f"{payload.full_name}!"
+        ),
+        html_body=f"""
+        <h1>Welcome, {payload.full_name}!</h1>
+        <p>
+            Your account has been successfully created.
+        </p>
+        """
+    )
     return response
 
 
