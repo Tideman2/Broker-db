@@ -9,6 +9,9 @@ from app.Models.auth_models import (
     UserResponse
 )
 
+from app.email import email_service
+from app.templates import template_env
+
 from app.Models.wallet_models import (
     AddBankDestinationRequest,
     AddCryptoDestinationRequest
@@ -76,8 +79,27 @@ def create_user(data: User) -> CreateUserResponse:
         # Create wallet for user
         _create_wallet(cursor, user_id)
 
-        conn.commit()
         access_token = create_token(user_id, "USER")
+
+        # Handle sending welcome email
+        template = template_env.get_template("welcome_aboard.html")
+
+        html_content = template.render(
+            email=data.email,
+            username=data.username
+        )
+
+        email_service.send_email(
+            to=data.email,
+            subject="Welcome!",
+            body=(
+                f"Welcome to the platform, "
+                f"{data.full_name}!"
+            ),
+            html_body=html_content
+        )
+
+        conn.commit()
         return {"id": user_id, "message": "User created", "token": access_token}
 
     except Exception as e:
