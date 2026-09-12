@@ -1,8 +1,10 @@
 from fastapi import APIRouter, Depends
 from app.services.user_services import (
     add_bank_withdraw_destination,
-    add_crypto_withdraw_destination
+    add_crypto_withdraw_destination,
+    get_withdraw_destinations
 )
+
 from app.Models.wallet_models import (
     AddBankDestinationRequest,
     DestinationResponse,
@@ -52,4 +54,20 @@ def add_crypto_destination_endpoint(
     return add_crypto_withdraw_destination(
         user_id=user.user_id,
         destination=request
+    )
+
+
+@user_router.get(
+    "/withdraw-destinations",
+    response_model=list[DestinationResponse]
+)
+def get_withdraw_destinations_endpoint(
+    user=Depends(get_current_user)
+):
+    """
+    Get user destinations endpoint.
+    """
+
+    return get_withdraw_destinations(
+        user_id=user.user_id,
     )

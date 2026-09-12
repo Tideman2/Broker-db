@@ -35,8 +35,11 @@ from app.utils.wallet import (
     _add_crypto_destination,
     _get_withdraw_destination,
     _validate_destination_label,
-    _build_destination_response
+    _build_destination_response,
+    _get_withdraw_destinations,
+    _build_user_withdraw_destinations
 )
+
 
 from app.utils.password import hash_password, verify_password
 from app.utils.jwt import create_token, decode_token
@@ -393,6 +396,35 @@ def check_if_admin_email_and_password_is_correct(data: LoginUserRequest):
             status_code=500,
             detail=str(e)
         ) from e
+    finally:
+        cursor.close()
+        conn.close()
+
+
+def get_withdraw_destinations(
+        user_id: int
+):
+    """
+    Get a user withdraw destinations.
+    """
+
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    try:
+        destinations = _get_withdraw_destinations(cursor, user_id)
+
+        return _build_user_withdraw_destinations(destinations)
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        ) from e
+
     finally:
         cursor.close()
         conn.close()

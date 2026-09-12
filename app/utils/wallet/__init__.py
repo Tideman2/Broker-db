@@ -22,7 +22,9 @@ from .assets import _validate_asset
 from .responses import (
     _build_deposit_response,
     _build_withdraw_response,
-    _build_destination_response
+    _build_destination_response,
+    _build_withdrawals_response,
+    _build_user_withdraw_destinations
 )
 
 from .withdraws import (
@@ -34,5 +36,6 @@ from .withdraws import (
     _add_crypto_destination,
     _add_bank_destination,
     _add_withdraw_destination,
-    _validate_destination_label
+    _validate_destination_label,
+    _get_withdraw_destinations
 )

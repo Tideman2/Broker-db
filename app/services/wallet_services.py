@@ -1,5 +1,7 @@
 from decimal import Decimal
 from datetime import datetime, UTC
+from urllib import request
+from httpcore import request
 from fastapi import HTTPException
 
 from app.db.connection import get_connection
@@ -21,7 +23,8 @@ from app.utils.wallet import (
     _get_asset_by_symbol,
     _create_withdraw_record,
     _get_withdrawal_record,
-    _build_withdraw_response
+    _build_withdraw_response,
+    _build_withdrawals_response
 )
 
 from app.Models.wallet_models import (
@@ -30,6 +33,7 @@ from app.Models.wallet_models import (
     WithdrawFundsRequest,
     Withdraw
 )
+from app.utils.wallet.withdraws import _get_user_withdrawal_records
 
 # ======================================================
 # DEPOSITS
@@ -225,6 +229,93 @@ def submit_withdrawal(
     except Exception as e:
         conn.rollback()
 
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        ) from e
+
+    finally:
+        cursor.close()
+        conn.close()
+
+
+def get_user_total_available_balance(
+        user_id: int
+):
+    """
+    Get a withdrawal record.
+    """
+
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    try:
+        wallet = _get_wallet(cursor, user_id)
+
+        return wallet["available"]
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        ) from e
+
+    finally:
+        cursor.close()
+        conn.close()
+
+
+def get_user_withdrawals(
+    user_id: int
+):
+    """
+    Get user's withdrawal records.
+    """
+
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    try:
+        withdrawals = _get_user_withdrawal_records(cursor, user_id)
+
+        return _build_withdrawals_response(withdrawals)
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        ) from e
+
+    finally:
+        cursor.close()
+        conn.close()
+
+
+def get_a_withdraw_record(
+        withdraw_id: int
+):
+    """
+    Get a withdrawal record.
+    """
+
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    try:
+        withdraw = _get_withdrawal_record(cursor, withdraw_id)
+
+        return _build_withdraw_response(withdraw)
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
         raise HTTPException(
             status_code=500,
             detail=str(e)

@@ -119,6 +119,16 @@ class WithdrawStatus(str, Enum):
     rejected = "rejected"
 
 
+class UserWithdrawalRecordsResponse(BaseModel):
+    id: int
+    amount: Decimal
+    status: WithdrawStatus
+    created_at: datetime
+    asset_symbol: str
+    asset_name: str
+    destination_type: str
+
+
 class WithdrawFundsResponse(BaseModel):
     id: int
 

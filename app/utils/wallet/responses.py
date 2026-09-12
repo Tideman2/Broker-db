@@ -6,7 +6,8 @@ from app.Models.wallet_models import (
     WithdrawFundsResponse,
     WithdrawStatus,
     DestinationResponse,
-    DestinationType
+    DestinationType,
+    UserWithdrawalRecordsResponse
 )
 
 
@@ -80,3 +81,42 @@ def _build_destination_response(
         account_name=destination["account_name"],
         account_number=destination["account_number"],
     )
+
+
+def _build_withdrawals_response(
+    withdrawals: list[dict]
+) -> list[UserWithdrawalRecordsResponse]:
+    return [
+        UserWithdrawalRecordsResponse(
+            id=withdrawal["id"],
+            amount=withdrawal["amount"],
+            status=withdrawal["status"],
+            created_at=withdrawal["created_at"],
+            asset_symbol=withdrawal["asset_symbol"],
+            asset_name=withdrawal["asset_name"],
+            destination_type=withdrawal["destination_type"],
+        )
+        for withdrawal in withdrawals
+    ]
+
+
+def _build_user_withdraw_destinations(
+    destinations: list[dict]
+) -> list[DestinationResponse]:
+    return [
+        DestinationResponse(
+            id=destination["id"],
+            label=destination["label"],
+            type=DestinationType[destination["type"]],
+
+            asset_id=destination["asset_id"],
+            asset_symbol=destination["asset_symbol"],
+            asset_name=destination["asset_name"],
+            address=destination["address"],
+
+            bank_name=destination["bank_name"],
+            account_name=destination["account_name"],
+            account_number=destination["account_number"],
+        )
+        for destination in destinations
+    ]
