@@ -17,14 +17,21 @@ from .deposits import (
 )
 
 from .payment_methods import _validate_payment_method
-from .assets import _validate_asset
+from .assets import (
+    _validate_asset,
+    _get_assets,
+    _get_asset_by_id
+)
 
 from .responses import (
     _build_deposit_response,
     _build_withdraw_response,
     _build_destination_response,
     _build_withdrawals_response,
-    _build_user_withdraw_destinations
+    _build_user_withdraw_destinations,
+    _build_asset_response,
+    _build_assets_response,
+    _build_delete_asset_response
 )
 
 from .withdraws import (

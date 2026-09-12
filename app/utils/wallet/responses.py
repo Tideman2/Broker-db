@@ -10,6 +10,11 @@ from app.Models.wallet_models import (
     UserWithdrawalRecordsResponse
 )
 
+from app.Models.asset_models import (
+    AssetResponse,
+    DeleteAssetResponse
+)
+
 
 def _build_deposit_response(deposit: dict) -> DepositFundsResponse:
 
@@ -120,3 +125,45 @@ def _build_user_withdraw_destinations(
         )
         for destination in destinations
     ]
+
+
+# ASSETS
+
+def _build_assets_response(
+    assets: list[dict]
+) -> list[AssetResponse]:
+    return [
+        AssetResponse(
+            id=asset["id"],
+            symbol=asset["symbol"],
+            name=asset["name"],
+            address=asset["address"],
+            is_active=asset["is_active"],
+            created_at=asset["created_at"],
+            updated_at=asset["updated_at"],
+        )
+        for asset in assets
+    ]
+
+
+def _build_asset_response(
+    asset: dict
+) -> AssetResponse:
+    return AssetResponse(
+        id=asset["id"],
+        symbol=asset["symbol"],
+        name=asset["name"],
+        address=asset["address"],
+        is_active=asset["is_active"],
+        created_at=asset["created_at"],
+        updated_at=asset["updated_at"],
+    )
+
+
+def _build_delete_asset_response(
+    asset_id: int
+) -> DeleteAssetResponse:
+    return DeleteAssetResponse(
+        id=asset_id,
+        message="Asset deleted successfully."
+    )
