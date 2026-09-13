@@ -4,7 +4,9 @@ from app.db.queries.deposits_queries import (
     ADD_DEPOSIT,
     GET_DEPOSIT,
     CONFIRM_DEPOSIT,
-    REJECT_DEPOSIT
+    REJECT_DEPOSIT,
+    GET_DEPOSITS,
+    GET_RECENT_DEPOSITS
 )
 
 from app.Models.wallet_models import Deposit
@@ -31,6 +33,17 @@ def _validate_amount(amount: Decimal):
             status_code=400,
             detail="Amount must be greater than zero."
         )
+
+
+def _get_recent_deposits(cursor, user_id, limit: int, offset: int) -> list[dict]:
+    """
+    Get's paginated deposits for user
+    """
+    cursor.execute(GET_RECENT_DEPOSITS, (user_id, limit, offset))
+
+    deposits = cursor.fetchall()
+
+    return deposits
 
 
 def _get_deposit_record(cursor, deposit_id: int):

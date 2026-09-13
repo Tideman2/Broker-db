@@ -52,6 +52,20 @@ class DepositFundsResponse(BaseModel):
     account_number: str | None = None
 
 
+class PaymentMethodResponse(BaseModel):
+    id: int
+    type: str
+    name: str
+
+
+class DepositResponse(BaseModel):
+    id: int
+    payment_method: str
+    asset: str
+    amount: Decimal
+    status: str
+    date: datetime
+
 # ======================================================
 # WITHDRAW MODELS
 # ======================================================

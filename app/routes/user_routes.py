@@ -5,11 +5,17 @@ from app.services.user_services import (
     get_withdraw_destinations
 )
 
+from app.services.wallet_services import (
+    get_recent_deposits
+)
+
 from app.Models.wallet_models import (
     AddBankDestinationRequest,
     DestinationResponse,
-    AddCryptoDestinationRequest
+    AddCryptoDestinationRequest,
+    DepositResponse
 )
+
 from app.utils.jwt import get_current_user
 
 user_router = APIRouter(
@@ -70,4 +76,24 @@ def get_withdraw_destinations_endpoint(
 
     return get_withdraw_destinations(
         user_id=user.user_id,
+    )
+
+
+@user_router.get(
+    "/deposits",
+    response_model=list[DepositResponse]
+)
+def get_deposits_endpoint(
+    limit: int = 10,
+    offset: int = 0,
+    user=Depends(get_current_user)
+):
+    """
+    Get paginated deposits for the current user.
+    """
+
+    return get_recent_deposits(
+        user_id=user.user_id,
+        limit=limit,
+        offset=offset
     )

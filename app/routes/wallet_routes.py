@@ -10,14 +10,16 @@ from app.services.wallet_services import (
     submit_withdrawal,
     get_user_withdrawals,
     get_a_withdraw_record,
-    get_user_total_available_balance
+    get_user_total_available_balance,
+    get_payment_methods
 )
 from app.Models.wallet_models import (
     DepositFundsRequest,
     DepositFundsResponse,
     WithdrawFundsRequest,
     WithdrawFundsResponse,
-    UserWithdrawalRecordsResponse
+    UserWithdrawalRecordsResponse,
+    PaymentMethodResponse
 )
 
 
@@ -46,6 +48,19 @@ def deposit_endpoint(
         user_id=user.user_id,
         data=request
     )
+
+
+@wallet_router.get(
+    "/payment-methods",
+    response_model=list[PaymentMethodResponse]
+)
+def get_platform_payment_methods(
+    user=Depends(get_current_user)
+):
+    """
+    Get platform payment method.
+    """
+    return get_payment_methods()
 
 
 @wallet_router.post(

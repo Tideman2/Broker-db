@@ -7,7 +7,9 @@ from app.Models.wallet_models import (
     WithdrawStatus,
     DestinationResponse,
     DestinationType,
-    UserWithdrawalRecordsResponse
+    UserWithdrawalRecordsResponse,
+    PaymentMethodResponse,
+    DepositResponse
 )
 
 from app.Models.asset_models import (
@@ -167,3 +169,32 @@ def _build_delete_asset_response(
         id=asset_id,
         message="Asset deleted successfully."
     )
+
+
+def _build_paymment_methods_response(
+    methods: list[dict]
+) -> list[PaymentMethodResponse]:
+    return [
+        PaymentMethodResponse(
+            id=method["id"],
+            type=method["type"],
+            name=method["name"]
+        )
+        for method in methods
+    ]
+
+
+def _build_deposits_response(
+    deposits: list[dict]
+) -> list[DepositResponse]:
+    return [
+        DepositResponse(
+            id=deposit["id"],
+            payment_method=deposit["payment_method"],
+            asset=deposit["asset"],
+            amount=deposit["amount"],
+            status=deposit["status"],
+            date=deposit["date"]
+        )
+        for deposit in deposits
+    ]

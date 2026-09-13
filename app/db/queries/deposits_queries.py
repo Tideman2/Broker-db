@@ -28,7 +28,7 @@ AND status = 'pending';
 
 GET_DEPOSITS = """
 SELECT *
-FROM deposits
+FROM deposits 
 ORDER BY created_at DESC;
 """
 
@@ -74,39 +74,19 @@ WHERE d.id = %s;
 """
 
 GET_RECENT_DEPOSITS = """
-SELECT
-    d.id,
-    d.amount,
-    d.status,
-    d.created_at,
-
-    a.id AS asset_id,
-    a.symbol,
-    a.name,
-
-    pm.id AS payment_method_id,
-    pm.type AS payment_method_type,
-
-    cpm.network,
-    cpm.wallet_address,
-
-    bpm.bank_name,
-    bpm.account_name,
-    bpm.account_number
-
-FROM deposits d
+SELECT d.id, 
+        pm.name as payment_method,
+        a.name as asset,
+        d.amount as amount,
+        d.status,
+        d.created_at as date
+FROM deposits as d
 
 JOIN assets a
     ON d.asset_id = a.id
 
-JOIN payment_methods pm
+JOIN payment_methods as pm
     ON d.payment_method_id = pm.id
-
-LEFT JOIN crypto_payment_method cpm
-    ON pm.id = cpm.payment_method_id
-
-LEFT JOIN bank_payment_methods bpm
-    ON pm.id = bpm.payment_method_id
 
 WHERE d.user_id = %s
 
