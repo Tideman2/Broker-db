@@ -1,5 +1,4 @@
 from fastapi import APIRouter, Depends
-from httpx import request
 
 from app.utils.jwt import get_current_user, require_admin
 
@@ -11,8 +10,10 @@ from app.services.wallet_services import (
     get_user_withdrawals,
     get_a_withdraw_record,
     get_user_total_available_balance,
-    get_payment_methods
+    get_payment_methods,
+    get__deposit
 )
+
 from app.Models.wallet_models import (
     DepositFundsRequest,
     DepositFundsResponse,
@@ -97,9 +98,23 @@ def reject_deposit_endpoint(
     )
 
 
+@wallet_router.get(
+    "/deposit/{id}",
+    response_model=DepositFundsResponse
+)
+def get_deposit_endpoint(
+    id: int,
+    user=Depends(get_current_user)
+):
+    """
+    Get a deposit record.
+    """
+    return get__deposit(deposit_id=id)
+
 # ======================================================
 # WITHDRAW
 # ======================================================
+
 
 @wallet_router.post(
     "/withdraw",

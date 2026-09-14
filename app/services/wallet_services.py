@@ -174,6 +174,30 @@ def get_recent_deposits(user_id: int, limit: int, offset: int):
         conn.close()
 
 
+def get__deposit(deposit_id):
+    """
+    wallet service to get a deposit
+    """
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    try:
+        deposit = _get_deposit_record(cursor, deposit_id)
+
+        return _build_deposit_response(deposit)
+
+    except Exception as e:
+
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        ) from e
+
+    finally:
+        cursor.close()
+        conn.close()
+
+
 def reject_deposit(
     user_id: int,
     deposit_id: int
