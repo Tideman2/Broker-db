@@ -105,6 +105,23 @@ LEFT JOIN bank_destinations bd
 WHERE w.id = %s;
 """
 
+GET_WITHDRAWAL_RECORDS = """
+SELECT
+    w.id,
+    w.amount,
+    w.status,
+    w.created_at,
+    a.symbol AS asset_symbol,
+    a.name AS asset_name,
+    wd.type AS destination_type
+FROM withdrawals w
+JOIN assets a
+    ON w.asset_id = a.id
+JOIN withdrawal_destination wd
+    ON w.withdrawal_destination_id = wd.id
+WHERE w.user_id = %s;
+"""
+
 GET_WITHDRAW_DESTINATION_BY_LABEL = """
 SELECT *
 FROM withdrawal_destination
@@ -142,6 +159,38 @@ LEFT JOIN assets a
     ON cd.asset_id = a.id  
 
 WHERE wd.id = %s;
+"""
+
+GET_WITHDRAWAL_DESTINATIONS = """
+SELECT
+    wd.id,
+    wd.user_id,
+    wd.label,
+    wd.type,
+    wd.created_at,
+
+    cd.address,
+
+    bd.bank_name,
+    bd.account_name,
+    bd.account_number,
+
+    a.id AS asset_id,
+    a.name AS asset_name,
+    a.symbol AS asset_symbol
+
+FROM withdrawal_destination wd
+
+LEFT JOIN crypto_destinations cd
+    ON wd.id = cd.withdrawal_destinations_id
+
+LEFT JOIN bank_destinations bd
+    ON wd.id = bd.withdrawal_destinations_id
+
+LEFT JOIN assets a
+    ON cd.asset_id = a.id  
+
+WHERE wd.user_id = %s;
 """
 
 GET_CRYPTO_DESTINATIONS = """

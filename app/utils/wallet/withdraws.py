@@ -8,7 +8,9 @@ from app.db.queries.withdraw_queries import (
     GET_WITHDRAW_DESTINATION_BY_LABEL,
     INSERT_WITHDRAWAL_RECORD,
     GET_ASSET_BY_SYMBOL,
-    GET_WITHDRAWAL_RECORD
+    GET_WITHDRAWAL_RECORD,
+    GET_WITHDRAWAL_RECORDS,
+    GET_WITHDRAWAL_DESTINATIONS
 )
 
 from app.Models.wallet_models import (
@@ -46,6 +48,23 @@ def _get_withdraw_destination(cursor, destination_id):
         )
 
     return destination
+
+
+def _get_withdraw_destinations(cursor, user_id):
+    """
+    Get withdraw_destinations or 404 error
+    """
+
+    cursor.execute(GET_WITHDRAWAL_DESTINATIONS, (user_id,))
+    destinations = cursor.fetchall()
+
+    if not destinations:
+        raise HTTPException(
+            status_code=404,
+            detail="No withdraw destination"
+        )
+
+    return destinations
 
 
 def _add_bank_destination(
@@ -142,3 +161,20 @@ def _get_withdrawal_record(cursor, withdrawal_id: int):
         )
 
     return asset
+
+
+def _get_user_withdrawal_records(cursor, user_id: int):
+    """
+    Fetch withdraw records for a user or raise 404.
+    """
+
+    cursor.execute(GET_WITHDRAWAL_RECORDS, (user_id,))
+    assets = cursor.fetchall()
+
+    if not assets:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No withdraw records found for user '{user_id}'."
+        )
+
+    return assets

@@ -13,16 +13,28 @@ from .deposits import (
     _get_deposit_record,
     _confirm_deposit_record,
     _reject_deposit_record,
-    _validate_amount
+    _validate_amount,
+    _get_recent_deposits
 )
 
 from .payment_methods import _validate_payment_method
-from .assets import _validate_asset
+from .assets import (
+    _validate_asset,
+    _get_assets,
+    _get_asset_by_id
+)
 
 from .responses import (
     _build_deposit_response,
     _build_withdraw_response,
-    _build_destination_response
+    _build_destination_response,
+    _build_withdrawals_response,
+    _build_user_withdraw_destinations,
+    _build_asset_response,
+    _build_assets_response,
+    _build_delete_asset_response,
+    _build_paymment_methods_response,
+    _build_deposits_response
 )
 
 from .withdraws import (
@@ -34,5 +46,6 @@ from .withdraws import (
     _add_crypto_destination,
     _add_bank_destination,
     _add_withdraw_destination,
-    _validate_destination_label
+    _validate_destination_label,
+    _get_withdraw_destinations
 )

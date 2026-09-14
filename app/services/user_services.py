@@ -9,6 +9,9 @@ from app.Models.auth_models import (
     UserResponse
 )
 
+from app.email import email_service
+from app.templates import template_env
+
 from app.Models.wallet_models import (
     AddBankDestinationRequest,
     AddCryptoDestinationRequest
@@ -32,8 +35,11 @@ from app.utils.wallet import (
     _add_crypto_destination,
     _get_withdraw_destination,
     _validate_destination_label,
-    _build_destination_response
+    _build_destination_response,
+    _get_withdraw_destinations,
+    _build_user_withdraw_destinations
 )
+
 
 from app.utils.password import hash_password, verify_password
 from app.utils.jwt import create_token, decode_token
@@ -76,8 +82,27 @@ def create_user(data: User) -> CreateUserResponse:
         # Create wallet for user
         _create_wallet(cursor, user_id)
 
-        conn.commit()
         access_token = create_token(user_id, "USER")
+
+        # Handle sending welcome email
+        template = template_env.get_template("welcome_aboard.html")
+
+        html_content = template.render(
+            email=data.email,
+            username=data.username
+        )
+
+        email_service.send_email(
+            to=data.email,
+            subject="Welcome!",
+            body=(
+                f"Welcome to the platform, "
+                f"{data.full_name}!"
+            ),
+            html_body=html_content
+        )
+
+        conn.commit()
         return {"id": user_id, "message": "User created", "token": access_token}
 
     except Exception as e:
@@ -371,6 +396,35 @@ def check_if_admin_email_and_password_is_correct(data: LoginUserRequest):
             status_code=500,
             detail=str(e)
         ) from e
+    finally:
+        cursor.close()
+        conn.close()
+
+
+def get_withdraw_destinations(
+        user_id: int
+):
+    """
+    Get a user withdraw destinations.
+    """
+
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    try:
+        destinations = _get_withdraw_destinations(cursor, user_id)
+
+        return _build_user_withdraw_destinations(destinations)
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        ) from e
+
     finally:
         cursor.close()
         conn.close()

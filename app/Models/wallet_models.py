@@ -52,6 +52,20 @@ class DepositFundsResponse(BaseModel):
     account_number: str | None = None
 
 
+class PaymentMethodResponse(BaseModel):
+    id: int
+    type: str
+    name: str
+
+
+class DepositResponse(BaseModel):
+    id: int
+    payment_method: str
+    asset: str
+    amount: Decimal
+    status: str
+    date: datetime
+
 # ======================================================
 # WITHDRAW MODELS
 # ======================================================
@@ -117,6 +131,16 @@ class WithdrawStatus(str, Enum):
     pending = "pending"
     confirmed = "confirmed"
     rejected = "rejected"
+
+
+class UserWithdrawalRecordsResponse(BaseModel):
+    id: int
+    amount: Decimal
+    status: WithdrawStatus
+    created_at: datetime
+    asset_symbol: str
+    asset_name: str
+    destination_type: str
 
 
 class WithdrawFundsResponse(BaseModel):

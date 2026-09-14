@@ -21,7 +21,11 @@ from app.utils.wallet import (
     _get_asset_by_symbol,
     _create_withdraw_record,
     _get_withdrawal_record,
-    _build_withdraw_response
+    _build_withdraw_response,
+    _build_withdrawals_response,
+    _build_paymment_methods_response,
+    _get_recent_deposits,
+    _build_deposits_response
 )
 
 from app.Models.wallet_models import (
@@ -30,6 +34,11 @@ from app.Models.wallet_models import (
     WithdrawFundsRequest,
     Withdraw
 )
+from app.utils.wallet.withdraws import _get_user_withdrawal_records
+
+from app.services.pagination_service import PaginationRequest
+
+from app.db.queries.payment_method import (GET_PAYMENT_METHODS)
 
 # ======================================================
 # DEPOSITS
@@ -134,6 +143,61 @@ def confirm_deposit(
         conn.close()
 
 
+def get_recent_deposits(user_id: int, limit: int, offset: int):
+    """
+    wallet service to get recent deposits
+    """
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    try:
+        pagination = PaginationRequest(_get_recent_deposits)
+
+        pagination_data = pagination.runCallback(
+            cursor=cursor,
+            user_id=user_id,
+            limit=limit,
+            offset=offset
+        )
+
+        return _build_deposits_response(pagination_data)
+
+    except Exception as e:
+
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        ) from e
+
+    finally:
+        cursor.close()
+        conn.close()
+
+
+def get__deposit(deposit_id):
+    """
+    wallet service to get a deposit
+    """
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    try:
+        deposit = _get_deposit_record(cursor, deposit_id)
+
+        return _build_deposit_response(deposit)
+
+    except Exception as e:
+
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        ) from e
+
+    finally:
+        cursor.close()
+        conn.close()
+
+
 def reject_deposit(
     user_id: int,
     deposit_id: int
@@ -225,6 +289,128 @@ def submit_withdrawal(
     except Exception as e:
         conn.rollback()
 
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        ) from e
+
+    finally:
+        cursor.close()
+        conn.close()
+
+
+def get_user_total_available_balance(
+        user_id: int
+):
+    """
+    Get a withdrawal record.
+    """
+
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    try:
+        wallet = _get_wallet(cursor, user_id)
+
+        return wallet["available"]
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        ) from e
+
+    finally:
+        cursor.close()
+        conn.close()
+
+
+def get_user_withdrawals(
+    user_id: int
+):
+    """
+    Get user's withdrawal records.
+    """
+
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    try:
+        withdrawals = _get_user_withdrawal_records(cursor, user_id)
+
+        return _build_withdrawals_response(withdrawals)
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        ) from e
+
+    finally:
+        cursor.close()
+        conn.close()
+
+
+def get_a_withdraw_record(
+        withdraw_id: int
+):
+    """
+    Get a withdrawal record.
+    """
+
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    try:
+        withdraw = _get_withdrawal_record(cursor, withdraw_id)
+
+        return _build_withdraw_response(withdraw)
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        ) from e
+
+    finally:
+        cursor.close()
+        conn.close()
+
+
+def get_payment_methods():
+    """
+    Get available payment methods.
+    """
+
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    try:
+        cursor.execute(GET_PAYMENT_METHODS)
+
+        payment_methods = cursor.fetchall()
+
+        if not payment_methods:
+            raise HTTPException(
+                status_code=404,
+                detail="No payment methods found."
+            )
+
+        return _build_paymment_methods_response(payment_methods)
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
         raise HTTPException(
             status_code=500,
             detail=str(e)

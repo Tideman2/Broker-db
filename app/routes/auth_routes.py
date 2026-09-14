@@ -1,8 +1,9 @@
-
 from fastapi import APIRouter, Depends
+
 from app.services import user_services
 from app.Models.auth_models import User, LoginUserRequest, RefreshTokenRequest
 from app.utils.jwt import get_current_user
+
 
 auth_router = APIRouter(
     prefix="/auth",

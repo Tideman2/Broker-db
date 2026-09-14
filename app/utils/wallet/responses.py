@@ -6,7 +6,15 @@ from app.Models.wallet_models import (
     WithdrawFundsResponse,
     WithdrawStatus,
     DestinationResponse,
-    DestinationType
+    DestinationType,
+    UserWithdrawalRecordsResponse,
+    PaymentMethodResponse,
+    DepositResponse
+)
+
+from app.Models.asset_models import (
+    AssetResponse,
+    DeleteAssetResponse
 )
 
 
@@ -80,3 +88,113 @@ def _build_destination_response(
         account_name=destination["account_name"],
         account_number=destination["account_number"],
     )
+
+
+def _build_withdrawals_response(
+    withdrawals: list[dict]
+) -> list[UserWithdrawalRecordsResponse]:
+    return [
+        UserWithdrawalRecordsResponse(
+            id=withdrawal["id"],
+            amount=withdrawal["amount"],
+            status=withdrawal["status"],
+            created_at=withdrawal["created_at"],
+            asset_symbol=withdrawal["asset_symbol"],
+            asset_name=withdrawal["asset_name"],
+            destination_type=withdrawal["destination_type"],
+        )
+        for withdrawal in withdrawals
+    ]
+
+
+def _build_user_withdraw_destinations(
+    destinations: list[dict]
+) -> list[DestinationResponse]:
+    return [
+        DestinationResponse(
+            id=destination["id"],
+            label=destination["label"],
+            type=DestinationType[destination["type"]],
+
+            asset_id=destination["asset_id"],
+            asset_symbol=destination["asset_symbol"],
+            asset_name=destination["asset_name"],
+            address=destination["address"],
+
+            bank_name=destination["bank_name"],
+            account_name=destination["account_name"],
+            account_number=destination["account_number"],
+        )
+        for destination in destinations
+    ]
+
+
+# ASSETS
+
+def _build_assets_response(
+    assets: list[dict]
+) -> list[AssetResponse]:
+    return [
+        AssetResponse(
+            id=asset["id"],
+            symbol=asset["symbol"],
+            name=asset["name"],
+            address=asset["address"],
+            is_active=asset["is_active"],
+            created_at=asset["created_at"],
+            updated_at=asset["updated_at"],
+        )
+        for asset in assets
+    ]
+
+
+def _build_asset_response(
+    asset: dict
+) -> AssetResponse:
+    return AssetResponse(
+        id=asset["id"],
+        symbol=asset["symbol"],
+        name=asset["name"],
+        address=asset["address"],
+        is_active=asset["is_active"],
+        created_at=asset["created_at"],
+        updated_at=asset["updated_at"],
+    )
+
+
+def _build_delete_asset_response(
+    asset_id: int
+) -> DeleteAssetResponse:
+    return DeleteAssetResponse(
+        id=asset_id,
+        message="Asset deleted successfully."
+    )
+
+
+def _build_paymment_methods_response(
+    methods: list[dict]
+) -> list[PaymentMethodResponse]:
+    return [
+        PaymentMethodResponse(
+            id=method["id"],
+            type=method["type"],
+            name=method["name"]
+        )
+        for method in methods
+    ]
+
+
+def _build_deposits_response(
+    deposits: list[dict]
+) -> list[DepositResponse]:
+    return [
+        DepositResponse(
+            id=deposit["id"],
+            payment_method=deposit["payment_method"],
+            asset=deposit["asset"],
+            amount=deposit["amount"],
+            status=deposit["status"],
+            date=deposit["date"]
+        )
+        for deposit in deposits
+    ]

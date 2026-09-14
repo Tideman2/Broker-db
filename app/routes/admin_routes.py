@@ -1,8 +1,7 @@
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 from app.services import user_services
 from app.Models.auth_models import Admin, LoginUserRequest
-from app.utils.jwt import require_admin
 
 admin_router = APIRouter(
     prefix="/admin",

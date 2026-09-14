@@ -747,7 +747,7 @@
     </mxGraphModel>
   </diagram>
   <diagram id="Cc6bDpCY9FUCIAHZo-pW" name="Page-9">
-    <mxGraphModel dx="1747" dy="1404" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+    <mxGraphModel dx="827" dy="665" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -756,6 +756,9 @@
             <mxGeometry x="110" y="270" width="500" height="1840" as="geometry" />
           </mxCell>
         </UserObject>
+        <mxCell id="Ev9StqM9MwbQpgJv_PXY-1" value="All right next up is the deposit module this is the path to the design src/asset/designs/deposit. This is the post endpoint to deposit http://127.0.0.1:8001/wallet/deposit this is the request  and this is the response class Deposit(BaseModel):    amount: Decimal    asset_id: int    payment_method: PaymentMethodclass DepositFundsRequest(BaseModel):    deposit: Depositclass DepositFundsResponse(BaseModel):    id: int    amount: Decimal    status: DepositStatus    created_at: datetime    confirmed_at: datetime | None = None    asset_id: int    asset_symbol: str    asset_name: str    payment_method_id: int    payment_method_name: str    payment_method_type: str    bank_name: str | None = None    account_name: str | None = None    account_number: str | None = None . There is either a crypto or bank payment methods for crypto payment method use the asset  used when creating crypto withdraw  destinations for bank payment mmethod leave it as coming soon. This is the endpoint to get payment methods GET http://127.0.0.1:8001/wallet/payment-methods this is the response list[class PaymentMethodResponse(BaseModel):    id: int    type: str    name: str ]example  [    {        &quot;id&quot;: 1,        &quot;type&quot;: &quot;CRYPTO&quot;,        &quot;name&quot;: &quot;crypto&quot;    },    {        &quot;id&quot;: 2,        &quot;type&quot;: &quot;BANK TRANSFER&quot;,        &quot;name&quot;: &quot;bank&quot;    }] ." style="text;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry x="720" y="440" width="560" height="240" as="geometry" />
+        </mxCell>
       </root>
     </mxGraphModel>
   </diagram>
