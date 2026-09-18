@@ -5,7 +5,7 @@ INSERT INTO deposits (
     asset_id,
     status,
     payment_method_id
-) VALUES ( %s, %s, %s, "pending", %s );
+) VALUES ( %s, %s, %s, 'pending', %s );
 """
 
 CONFIRM_DEPOSIT = """
