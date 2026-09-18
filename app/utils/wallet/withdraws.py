@@ -59,10 +59,7 @@ def _get_withdraw_destinations(cursor, user_id):
     destinations = cursor.fetchall()
 
     if not destinations:
-        raise HTTPException(
-            status_code=404,
-            detail="No withdraw destination"
-        )
+        return []
 
     return destinations
 
@@ -172,9 +169,6 @@ def _get_user_withdrawal_records(cursor, user_id: int):
     assets = cursor.fetchall()
 
     if not assets:
-        raise HTTPException(
-            status_code=404,
-            detail=f"No withdraw records found for user '{user_id}'."
-        )
+        return []
 
     return assets
