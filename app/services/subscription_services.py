@@ -13,7 +13,10 @@ from app.utils.plans import (
     _validate_active_plan,
     _validate_minimum_investment,
     _build_subscription_response,
+    _build_subscription_list,
+    _build_subscriptions_response,
     _get_subscription,
+    _get_user_subscriptions,
     _validate_no_active_subscription,
     _get_active_subscription,
     _cancel_subscription
@@ -24,6 +27,40 @@ from app.utils.wallet import (
     _validate_available_balance,
     _lock_funds
 )
+
+
+def get_user_subscriptions(
+        user_id: int
+):
+    """
+    Gets all subscriptions belonging to a user.
+    """
+
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    try:
+        subscriptions = _get_user_subscriptions(
+            cursor,
+            user_id
+        )
+
+        return _build_subscriptions_response(
+            _build_subscription_list(subscriptions)
+        )
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        ) from e
+
+    finally:
+        cursor.close()
+        conn.close()
 
 
 def subscribe_to_a_plan(

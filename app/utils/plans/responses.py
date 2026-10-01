@@ -1,7 +1,9 @@
 from decimal import Decimal
 from app.Models.plans_models import (
     PlanResponse,
-    SubscriptionResponse
+    PlansResponse,
+    SubscriptionResponse,
+    SubscriptionsResponse
 )
 
 
@@ -33,6 +35,13 @@ def _build_subscription_list(
     ]
 
 
+def _build_subscriptions_response(
+    subscriptions: list[SubscriptionResponse]
+) -> SubscriptionsResponse:
+
+    return SubscriptionsResponse(subscriptions=subscriptions)
+
+
 def _build_plan_response(
     plan: dict,
     features: list[dict]
@@ -54,3 +63,11 @@ def _build_plan_response(
         created_at=plan["created_at"],
         updated_at=plan["updated_at"],
     )
+
+
+def _build_plans_response(
+    plans: list[PlanResponse]
+) -> PlansResponse:
+
+    return PlansResponse(plans=plans)
+

@@ -1,6 +1,11 @@
 from fastapi import HTTPException
 from app.db.connection import get_connection
 
+from app.Models.auth_models import (
+    CurrentUser,
+    UserRole
+)
+
 from app.Models.plans_models import (
     CreatePlanRequest,
     UpdatePlanRequest
@@ -13,13 +18,54 @@ from app.utils.plans import (
     _add_plan_feature,
     _validate_positive,
     _build_plan_response,
+    _build_plans_response,
     _get_plan,
+    _get_plans,
+    _get_active_plans,
     _get_plan_features,
     _validate_plan,
     _validate_plan_title_unique_for_update,
     _update_plan,
     _delete_plan_features
 )
+
+
+def get_plans(
+        user: CurrentUser
+):
+    """
+    Get plans. Users receive active plans only, admins receive all plans.
+    """
+
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    try:
+        if user.role == UserRole.ADMIN:
+            plans = _get_plans(cursor)
+        else:
+            plans = _get_active_plans(cursor)
+
+        return _build_plans_response([
+            _build_plan_response(
+                plan,
+                _get_plan_features(cursor, plan["id"])
+            )
+            for plan in plans
+        ])
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        ) from e
+
+    finally:
+        cursor.close()
+        conn.close()
 
 
 def create_plan(

@@ -1,20 +1,38 @@
 from fastapi import APIRouter, Depends
 
-from app.services.plan_services import create_plan, update_plan
+from app.services.plan_services import (
+    create_plan,
+    get_plans,
+    update_plan
+)
 
 from app.Models.plans_models import (
     CreatePlanRequest,
     PlanResponse,
+    PlansResponse,
     UpdatePlanRequest
 )
 
-from app.utils.jwt import require_admin
+from app.utils.jwt import get_current_user, require_admin
 
 
 plan_router = APIRouter(
     prefix="/plan",
     tags=["Plans"]
 )
+
+
+@plan_router.get(
+    "",
+    response_model=PlansResponse
+)
+def get_plans_endpoint(
+    user=Depends(get_current_user)
+):
+    """
+    Get plans. Users receive active plans only, admins receive all plans.
+    """
+    return get_plans(user=user)
 
 
 @plan_router.post(

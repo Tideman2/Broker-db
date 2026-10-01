@@ -110,8 +110,8 @@ def _get_active_subscription(
     cursor.execute(
         GET_ACTIVE_SUBSCRIPTION,
         (
-            user_id,
             subscription_id,
+            user_id,
         )
     )
 

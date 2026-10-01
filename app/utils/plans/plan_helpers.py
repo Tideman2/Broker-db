@@ -6,6 +6,7 @@ from app.db.queries.plans_queries import (
     GET_PLAN,
     GET_PLAN_BY_TITLE_EXCLUDING_ID,
     GET_PLANS,
+    GET_ACTIVE_PLANS,
     GET_PLAN_BY_TITLE,
     GET_PLAN_FEATURES,
     GET_PLAN_FEATURE,
@@ -138,6 +139,16 @@ def _get_plans(cursor):
     """
 
     cursor.execute(GET_PLANS)
+
+    return cursor.fetchall()
+
+
+def _get_active_plans(cursor):
+    """
+    Returns all active plans.
+    """
+
+    cursor.execute(GET_ACTIVE_PLANS)
 
     return cursor.fetchall()
 
