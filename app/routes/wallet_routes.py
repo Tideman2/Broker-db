@@ -76,7 +76,6 @@ def confirm_deposit_endpoint(
     Confirm a deposit.
     """
     return confirm_deposit(
-        user_id=user.user_id,
         deposit_id=deposit_id
     )
 

@@ -66,12 +66,12 @@ def _get_deposit_record(cursor, deposit_id: int):
 #
 
 
-def _confirm_deposit_record(cursor, confirmed_at, deposit_id: int, user_id: int):
+def _confirm_deposit_record(cursor, confirmed_at, deposit_id: int):
     """
     Confirm's deposit in db or raise a 400 error.
     """
 
-    cursor.execute(CONFIRM_DEPOSIT,  (confirmed_at, deposit_id, user_id,))
+    cursor.execute(CONFIRM_DEPOSIT,  (confirmed_at, deposit_id,))
 
     if cursor.rowcount == 0:
         raise HTTPException(

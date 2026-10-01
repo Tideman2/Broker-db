@@ -11,6 +11,7 @@ from app.Models.portfolio_models import (
 from app.db.queries.instrument_queries import GET_USER_INSTRUMENT_TRANSACTIONS, GROUP_USER_INSTRUMENT, GET_INSTRUMENT_RISK_WEIGHT
 from app.db.queries.transaction_queries import INSERT_BUY_TRANSACTION, INSERT_SELL_TRANSACTION
 
+from app.services.pagination_service import PaginationRequest
 
 from app.utils.wallet import (
     _credit_available,
@@ -19,6 +20,7 @@ from app.utils.wallet import (
 
 from app.utils.portfolio_helpers import _get_user, _get_instrument, _compute_net_quantity
 from app.utils.portfolio_helpers import _validate_quantity, _compute_instrument_profit_loss
+from app.utils.portfolio_helpers import _get_trades, _compute_trade_overview
 
 
 def buy_instrument(
@@ -385,6 +387,115 @@ def get_portfolio_profit_loss(user_id: int):
                 (portfolio_realized + portfolio_unrealized).quantize(Decimal("0.01")),
             "instruments": instrument_profit_loss
         }
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        ) from e
+
+    finally:
+        cursor.close()
+        conn.close()
+
+
+def get_trades_overview(user_id: int):
+    """
+    Returns lifetime trade statistics for a user.
+
+    A trade is a single FIFO round-trip, so a buy that has not been
+    sold against is not counted. Every instrument the user has ever
+    traded is included, which is why GROUP_USER_INSTRUMENT is used
+    instead of compute_holdings: holdings skips closed positions and
+    would drop their realized profit/loss.
+    """
+
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    try:
+        _get_user(cursor, user_id)
+
+        cursor.execute(GROUP_USER_INSTRUMENT, (user_id,))
+        instrument_groups = cursor.fetchall()
+
+        transactions_by_instrument = []
+
+        for instrument in instrument_groups:
+
+            cursor.execute(
+                GET_USER_INSTRUMENT_TRANSACTIONS,
+                (
+                    user_id,
+                    instrument["id"]
+                )
+            )
+
+            transactions_by_instrument.append(cursor.fetchall())
+
+        return _compute_trade_overview(transactions_by_instrument)
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        ) from e
+
+    finally:
+        cursor.close()
+        conn.close()
+
+
+def get_paginated_trades(
+    user_id: int,
+    instrument_id: int = None,
+    trade_type: str = None,
+    days: int = None,
+    limit: int = 10,
+    offset: int = 0
+):
+    """
+    Returns a filtered, paginated page of a user's trades.
+    """
+
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    try:
+        pagination = PaginationRequest(_get_trades)
+
+        trades = pagination.runCallback(
+            cursor=cursor,
+            user_id=user_id,
+            limit=limit,
+            offset=offset,
+            instrument_id=instrument_id,
+            trade_type=trade_type,
+            days=days
+        )
+
+        return [
+            {
+                "transaction_id": trade["transaction_id"],
+                "instrument_id": trade["instrument_id"],
+                "symbol": trade["symbol"],
+                "name": trade["name"],
+                "type": trade["type"],
+                "quantity": trade["quantity"],
+                "price": trade["price"],
+                "total_value": (
+                    trade["quantity"] * trade["price"]
+                ).quantize(Decimal("0.01")),
+                "executed_at": trade["executed_at"]
+            }
+            for trade in trades
+        ]
 
     except HTTPException:
         raise

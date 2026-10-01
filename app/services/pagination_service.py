@@ -17,30 +17,45 @@ class PaginationRequest(Generic[T]):
     def runCallback(
         self,
         cursor: MySQLCursorDict,
-        user_id: int,
-        limit: int,
-        offset: int
+        user_id: int = None,
+        limit: int = None,
+        offset: int = None,
+        **filters
     ) -> T:
+        """
+        Runs the wrapped callback, passing only the arguments it
+        declares.
 
-        args_length = len(
-            inspect.signature(self.callback).parameters
-        )
+        A callback must accept cursor, limit and offset. Any further
+        parameters it declares, such as user_id or a filter, are
+        forwarded when supplied.
+        """
 
-        if args_length == 3:
-            return self.callback(
-                cursor,
-                limit,
-                offset
+        parameters = inspect.signature(self.callback).parameters
+
+        required = {
+            "cursor",
+            "limit",
+            "offset"
+        }
+
+        if not required.issubset(parameters):
+            raise TypeError(
+                "Callback must accept cursor, limit and offset."
             )
 
-        if args_length == 4:
-            return self.callback(
-                cursor,
-                user_id,
-                limit,
-                offset
-            )
+        available = {
+            "cursor": cursor,
+            "user_id": user_id,
+            "limit": limit,
+            "offset": offset,
+            **filters
+        }
 
-        raise TypeError(
-            "Callback must accept either 3 or 4 arguments."
-        )
+        arguments = {
+            name: value
+            for name, value in available.items()
+            if name in parameters
+        }
+
+        return self.callback(**arguments)

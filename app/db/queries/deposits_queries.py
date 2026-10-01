@@ -14,7 +14,6 @@ SET
     status = 'confirmed',
     confirmed_at = %s
 WHERE id = %s
-AND user_id = %s
 AND status = 'pending';
 """
 
@@ -37,6 +36,7 @@ SELECT
     d.id,
     d.amount,
     d.status,
+    d.user_id,
     d.confirmed_at,
     d.created_at,
 

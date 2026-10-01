@@ -29,7 +29,7 @@ def _validate_available_balance(amount: Decimal, available=0):
     if amount > available:
         raise HTTPException(
             status_code=400,
-            detail="Investment Amount is greater than available balance."
+            detail="Amount is lesser than available balance."
         )
 
 
