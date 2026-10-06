@@ -10,6 +10,7 @@ from .plan_helpers import (
     _get_plan_feature,
     _get_plan_features,
     _get_plans,
+    _get_active_plans,
     _update_plan,
     _update_plan_feature,
     _validate_minimum_investment,
@@ -24,7 +25,9 @@ from .plan_helpers import (
 
 from .responses import (
     _build_plan_response,
+    _build_plans_response,
     _build_subscription_list,
+    _build_subscriptions_response,
     _build_subscription_response
 )
 

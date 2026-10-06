@@ -100,7 +100,6 @@ def deposit_funds(
 
 
 def confirm_deposit(
-    user_id: int,
     deposit_id: int
 ):
     """
@@ -113,13 +112,14 @@ def confirm_deposit(
     try:
         # confirm deposit
         confirmed_at = datetime.now(UTC)
-        _confirm_deposit_record(cursor, confirmed_at, deposit_id, user_id)
+        _confirm_deposit_record(cursor, confirmed_at, deposit_id)
 
         # Get confirmed deposit
         deposit = _get_deposit_record(cursor, deposit_id)
 
         # Credit wallet
         amount = deposit["amount"].quantize(Decimal("0.01"))
+        user_id = deposit["user_id"]
         _credit_available(cursor, user_id, amount)
 
         conn.commit()

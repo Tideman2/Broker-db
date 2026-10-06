@@ -43,7 +43,7 @@ def fetch_user(user=Depends(get_current_user)):
 
 
 @auth_router.post("/refresh")
-def refresh_token(data: RefreshTokenRequest, user=Depends(get_current_user)):
+def refresh_token(data: RefreshTokenRequest):
     """
     Route handler sign a new token with the user id and full name
     """

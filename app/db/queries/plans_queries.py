@@ -102,6 +102,13 @@ FROM plans
 ORDER BY created_at DESC;
 """
 
+GET_ACTIVE_PLANS = """
+SELECT *
+FROM plans
+WHERE status = 'ACTIVE'
+ORDER BY created_at DESC;
+"""
+
 GET_PLAN_FEATURES = """
 SELECT *
 FROM plan_features

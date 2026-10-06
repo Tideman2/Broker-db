@@ -758,7 +758,7 @@
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="tGPp9C84CWjjCQT2KKHk-3" value="CLient" style="whiteSpace=wrap;html=1;" vertex="1" parent="1">
-          <mxGeometry x="120" y="170" width="270" height="60" as="geometry" />
+          <mxGeometry x="148.75" y="160" width="270" height="60" as="geometry" />
         </mxCell>
         <mxCell id="tGPp9C84CWjjCQT2KKHk-7" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="tGPp9C84CWjjCQT2KKHk-4" target="tGPp9C84CWjjCQT2KKHk-6">
           <mxGeometry relative="1" as="geometry" />
@@ -767,19 +767,19 @@
           <mxGeometry x="702.5" y="160" width="270" height="60" as="geometry" />
         </mxCell>
         <mxCell id="tGPp9C84CWjjCQT2KKHk-5" value="FsstAipi" style="whiteSpace=wrap;html=1;" vertex="1" parent="1">
-          <mxGeometry x="1210" y="170" width="270" height="60" as="geometry" />
+          <mxGeometry x="1220" y="160" width="270" height="60" as="geometry" />
         </mxCell>
         <mxCell id="tGPp9C84CWjjCQT2KKHk-6" value="&lt;span style=&quot;font-size: 23px;&quot;&gt;1. Handles the storing of access and refresh-token.&lt;/span&gt;&lt;div&gt;&lt;span style=&quot;font-size: 23px;&quot;&gt;&lt;br&gt;&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;font-size: 23px;&quot;&gt;2. Communicating with the fast api endpoints.&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;font-size: 23px;&quot;&gt;&lt;br&gt;&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;font-size: 23px;&quot;&gt;3.Protection of client routes from unautenticated access.&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;font-size: 23px;&quot;&gt;&lt;br&gt;&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;font-size: 23px;&quot;&gt;4. Storing of backend secrets and environment&lt;/span&gt;&lt;/div&gt;" style="whiteSpace=wrap;html=1;" vertex="1" parent="1">
-          <mxGeometry x="590" y="320" width="495" height="410" as="geometry" />
+          <mxGeometry x="570" y="310" width="540" height="410" as="geometry" />
         </mxCell>
         <mxCell id="tGPp9C84CWjjCQT2KKHk-8" value="&lt;span style=&quot;font-size: 23px;&quot;&gt;1. Handles the querying of db and business logic.&lt;/span&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;font-size: 23px;&quot;&gt;&lt;br&gt;&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;font-size: 23px;&quot;&gt;2.Protection of route handlers from unauthorized access.&lt;/span&gt;&lt;/div&gt;" style="whiteSpace=wrap;html=1;" vertex="1" parent="1">
-          <mxGeometry x="1120" y="310" width="495" height="300" as="geometry" />
+          <mxGeometry x="1120" y="300" width="520" height="310" as="geometry" />
         </mxCell>
         <mxCell id="tGPp9C84CWjjCQT2KKHk-9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.454;entryY=-0.015;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="tGPp9C84CWjjCQT2KKHk-5" target="tGPp9C84CWjjCQT2KKHk-8">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="naij8gayNWsH6gEJYviI-1" value="&lt;span style=&quot;font-size: 23px;&quot;&gt;1. Handles presentation of data&lt;/span&gt;&lt;div&gt;&lt;span style=&quot;font-size: 23px;&quot;&gt;&lt;br&gt;&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;font-size: 23px;&quot;&gt;2. Knows nothing about backend or auth format.&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;font-size: 23px;&quot;&gt;&lt;br&gt;&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;font-size: 23px;&quot;&gt;3.Passing of user input to mutate data to next.js server&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;font-size: 23px;&quot;&gt;&lt;br&gt;&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;" style="whiteSpace=wrap;html=1;" vertex="1" parent="1">
-          <mxGeometry x="7.5" y="310" width="495" height="330" as="geometry" />
+          <mxGeometry x="7.5" y="310" width="552.5" height="340" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>

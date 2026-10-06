@@ -42,7 +42,7 @@ from app.utils.wallet import (
 
 
 from app.utils.password import hash_password, verify_password
-from app.utils.jwt import create_token, decode_token
+from app.utils.jwt import ACCESS_SECRET_KEY, ACCESS_REFRESH_SECRET_KEY, create_token, decode_token
 
 
 def create_user(data: User) -> CreateUserResponse:
@@ -82,7 +82,10 @@ def create_user(data: User) -> CreateUserResponse:
         # Create wallet for user
         _create_wallet(cursor, user_id)
 
-        access_token = create_token(user_id, "USER")
+        access_token = create_token(user_id, "USER", ACCESS_SECRET_KEY)
+        # Refresh token valid for 7 days
+        refresh_token = create_token(
+            user_id, "USER", ACCESS_REFRESH_SECRET_KEY, expiration_hours=24*7)
 
         # Handle sending welcome email
         template = template_env.get_template("welcome_aboard.html")
@@ -103,7 +106,7 @@ def create_user(data: User) -> CreateUserResponse:
         )
 
         conn.commit()
-        return {"id": user_id, "message": "User created", "token": access_token}
+        return {"id": user_id, "message": "User created", "token": access_token, "refresh_token": refresh_token}
 
     except Exception as e:
         conn.rollback()
@@ -180,8 +183,13 @@ def check_if_email_and_password_is_correct(data: LoginUserRequest):
                 detail="Password is incorrect"
             )
 
-        accsse_token = create_token(user["id"], user["role"])
-        return {"user_id": user["id"], "token": accsse_token}
+        accsse_token = create_token(
+            user["id"], user["role"], ACCESS_SECRET_KEY)
+        # Refresh token valid for 7 days
+        refresh_token = create_token(
+            user["id"], "USER", ACCESS_REFRESH_SECRET_KEY, expiration_hours=24*7)
+
+        return {"user_id": user["id"], "token": accsse_token, "refresh_token": refresh_token}
 
     except HTTPException:
         raise
@@ -202,10 +210,11 @@ def generate_new_token(token: str) -> str:
     function that checks if the token is valid
     and generates a new token from same payload
     """
-    user = decode_token(token)
+    user = decode_token(token, type="refresh")
     user_id = user["user_id"]
     role = user["role"]
-    token = create_token(user_id, role)
+    token = create_token(
+        user_id, role, ACCESS_REFRESH_SECRET_KEY, expiration_hours=24*7)
     return token
 
 

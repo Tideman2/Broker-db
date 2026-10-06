@@ -7,7 +7,10 @@ from app.Models.portfolio_models import (
     SellInstrumentRequest,
     HoldingResponse,
     PortfolioOverviewResponse,
-    PortfolioProfitLossResponse
+    PortfolioProfitLossResponse,
+    TradeOverviewResponse,
+    TradeResponse,
+    TradeType
 )
 
 from app.services.portfolio_services import (
@@ -15,7 +18,9 @@ from app.services.portfolio_services import (
     sell_instrument,
     compute_holdings,
     get_portfolio_overview,
-    get_portfolio_profit_loss
+    get_portfolio_profit_loss,
+    get_paginated_trades,
+    get_trades_overview
 )
 
 from app.utils.jwt import get_current_user
@@ -90,3 +95,39 @@ def portfolio_profit_loss(user=Depends(get_current_user)):
     and total for whole portfolio
     """
     return get_portfolio_profit_loss(user_id=user.user_id)
+
+
+# ======================================================
+# TRADES
+# ======================================================
+
+
+@portfolio_router.get("/trades/overview", response_model=TradeOverviewResponse)
+def trades_overview(user=Depends(get_current_user)):
+    """
+    Get lifetime trade statistics: total trades, win rate and
+    total net profit. Not filterable.
+    """
+    return get_trades_overview(user_id=user.user_id)
+
+
+@portfolio_router.get("/trades", response_model=List[TradeResponse])
+def get_trades_endpoint(
+    instrument_id: int | None = None,
+    type: TradeType | None = None,
+    days: int | None = None,
+    limit: int = 10,
+    offset: int = 0,
+    user=Depends(get_current_user)
+):
+    """
+    Get a filtered, paginated list of the current user's trades.
+    """
+    return get_paginated_trades(
+        user_id=user.user_id,
+        instrument_id=instrument_id,
+        trade_type=type,
+        days=days,
+        limit=limit,
+        offset=offset
+    )

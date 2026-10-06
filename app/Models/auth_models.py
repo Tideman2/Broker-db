@@ -90,6 +90,7 @@ class CreateUserResponse(TypedDict):
     id: int
     message: str
     token: str
+    refresh_token: str
 
 
 class LoginUserRequest(BaseModel):

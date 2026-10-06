@@ -1,4 +1,6 @@
+from datetime import datetime
 from decimal import Decimal
+from enum import Enum
 from typing import List
 from pydantic import BaseModel
 
@@ -19,6 +21,11 @@ class SellInstrumentRequest(BaseModel):
 # ============================
 # Helper Models
 # ============================
+
+
+class TradeType(str, Enum):
+    BUY = "BUY"
+    SELL = "SELL"
 
 
 class InstrumentProfitLossResult(BaseModel):
@@ -74,3 +81,21 @@ class PortfolioOverviewResponse(BaseModel):
     diversification_score: str
     portfolio_risk_score: Decimal
     portfolio_risk_label: str
+
+
+class TradeResponse(BaseModel):
+    transaction_id: int
+    instrument_id: int
+    symbol: str
+    name: str
+    type: TradeType
+    quantity: Decimal
+    price: Decimal
+    total_value: Decimal
+    executed_at: datetime
+
+
+class TradeOverviewResponse(BaseModel):
+    total_trades: int
+    win_rate: Decimal
+    total_net_profit: Decimal
