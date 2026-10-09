@@ -11,6 +11,8 @@ from app.Models.auth_models import (
 
 from app.email import email_service
 from app.templates import template_env
+from app.services.redis_service import redis_client
+from app.utils.redis import store_access_token_in_redis
 
 from app.Models.wallet_models import (
     AddBankDestinationRequest,
@@ -45,7 +47,7 @@ from app.utils.password import hash_password, verify_password
 from app.utils.jwt import ACCESS_SECRET_KEY, ACCESS_REFRESH_SECRET_KEY, create_token, decode_token
 
 
-def create_user(data: User) -> CreateUserResponse:
+async def create_user(data: User) -> CreateUserResponse:
     """
      function that on boards a user to the system
     """
@@ -83,6 +85,13 @@ def create_user(data: User) -> CreateUserResponse:
         _create_wallet(cursor, user_id)
 
         access_token = create_token(user_id, "USER", ACCESS_SECRET_KEY)
+
+        await store_access_token_in_redis(
+            user_id=str(user_id),
+            access_token=access_token,
+            expiration_seconds=7200  # 2 hours in seconds
+        )
+
         # Refresh token valid for 7 days
         refresh_token = create_token(
             user_id, "USER", ACCESS_REFRESH_SECRET_KEY, expiration_hours=24*7)
@@ -158,7 +167,7 @@ def get_user(user_id) -> User:
         conn.close()
 
 
-def check_if_email_and_password_is_correct(data: LoginUserRequest):
+async def check_if_email_and_password_is_correct(data: LoginUserRequest):
     """
     function to check if email is in db,
     and check password agaisnt hashed in db.
@@ -183,13 +192,21 @@ def check_if_email_and_password_is_correct(data: LoginUserRequest):
                 detail="Password is incorrect"
             )
 
-        accsse_token = create_token(
+        access_token = create_token(
             user["id"], user["role"], ACCESS_SECRET_KEY)
+
+        # Store access token in Redis with 2 hours expiration
+        await store_access_token_in_redis(
+            user_id=str(user["id"]),
+            access_token=access_token,
+            expiration_seconds=7200  # 2 hours in seconds
+        )
+
         # Refresh token valid for 7 days
         refresh_token = create_token(
             user["id"], user["role"], ACCESS_REFRESH_SECRET_KEY, expiration_hours=24*7)
 
-        return {"user_id": user["id"], "token": accsse_token, "refresh_token": refresh_token}
+        return {"user_id": user["id"], "token": access_token, "refresh_token": refresh_token}
 
     except HTTPException:
         raise
@@ -205,7 +222,7 @@ def check_if_email_and_password_is_correct(data: LoginUserRequest):
         conn.close()
 
 
-def generate_new_token(token: str) -> str:
+async def generate_new_token(token: str) -> str:
     """
     function that checks if the token is valid
     and generates a new token from same payload
@@ -213,9 +230,15 @@ def generate_new_token(token: str) -> str:
     user = decode_token(token, type="refresh")
     user_id = user["user_id"]
     role = user["role"]
-    token = create_token(
-        user_id, role, ACCESS_SECRET_KEY, expiration_hours=24*7)
-    return token
+    access_token = create_token(
+        user_id, role, ACCESS_SECRET_KEY)
+
+    await store_access_token_in_redis(
+        user_id=str(user_id),
+        access_token=access_token,
+        expiration_seconds=7200  # 2 hours in seconds
+    )
+    return access_token
 
 
 def delete_user(user_id: int):
@@ -334,7 +357,7 @@ def add_crypto_withdraw_destination(user_id: int, destination: AddCryptoDestinat
 # ============================
 
 
-def create_admin(data: Admin) -> CreateUserResponse:
+async def create_admin(data: Admin) -> CreateUserResponse:
     """
     function that on boards an admon to the system
     """
@@ -353,6 +376,12 @@ def create_admin(data: Admin) -> CreateUserResponse:
 
         conn.commit()
         access_token = create_token(admin_id, "ADMIN")
+
+        await store_access_token_in_redis(
+            user_id=str(admin_id),
+            access_token=access_token,
+            expiration_seconds=7200  # 2 hours in seconds
+        )
         return {"id": admin_id, "message": "Admin created", "token": access_token}
 
     except Exception as e:
@@ -367,7 +396,7 @@ def create_admin(data: Admin) -> CreateUserResponse:
         conn.close()
 
 
-def check_if_admin_email_and_password_is_correct(data: LoginUserRequest):
+async def check_if_admin_email_and_password_is_correct(data: LoginUserRequest):
     """
     function to check if email is in db,
     and check password agaisnt hashed in db.
@@ -394,6 +423,12 @@ def check_if_admin_email_and_password_is_correct(data: LoginUserRequest):
 
         accesse_token = create_token(
             admin["id"], admin["role"])
+
+        await store_access_token_in_redis(
+            user_id=str(admin["id"]),
+            access_token=accesse_token,
+            expiration_seconds=7200  # 2 hours in seconds
+        )
         return {"token": accesse_token}
 
     except HTTPException:

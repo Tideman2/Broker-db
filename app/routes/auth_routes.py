@@ -22,12 +22,12 @@ def register_user(payload: User):
 
 
 @auth_router.post("/login")
-def login_user(payload: LoginUserRequest):
+async def login_user(payload: LoginUserRequest):
     """
      Route handler to login user,
      this function will also validate the incoming payload
     """
-    response = user_services.check_if_email_and_password_is_correct(payload)
+    response = await user_services.check_if_email_and_password_is_correct(payload)
     return response
 
 
