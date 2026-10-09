@@ -187,7 +187,7 @@ def check_if_email_and_password_is_correct(data: LoginUserRequest):
             user["id"], user["role"], ACCESS_SECRET_KEY)
         # Refresh token valid for 7 days
         refresh_token = create_token(
-            user["id"], "USER", ACCESS_REFRESH_SECRET_KEY, expiration_hours=24*7)
+            user["id"], user["role"], ACCESS_REFRESH_SECRET_KEY, expiration_hours=24*7)
 
         return {"user_id": user["id"], "token": accsse_token, "refresh_token": refresh_token}
 
@@ -214,7 +214,7 @@ def generate_new_token(token: str) -> str:
     user_id = user["user_id"]
     role = user["role"]
     token = create_token(
-        user_id, role, ACCESS_REFRESH_SECRET_KEY, expiration_hours=24*7)
+        user_id, role, ACCESS_SECRET_KEY, expiration_hours=24*7)
     return token
 
 
