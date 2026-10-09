@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.email import email_service
+from app.services.redis_service import redis_client, close_redis
 
 from app.routes.auth_routes import auth_router
 from app.routes.admin_routes import admin_router
@@ -24,11 +25,17 @@ origins = os.getenv(
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Connect to Redis and verify the connection
+    await redis_client.ping()
     # Start email workers
     email_service.start()
+
     yield
+
     # Stop email workers
     email_service.stop()
+    # Close Redis connection
+    await close_redis()
 
 app = FastAPI(lifespan=lifespan)
 
