@@ -11,6 +11,7 @@ from app.utils.redis import get_access_token_from_redis
 load_dotenv()
 ACCESS_SECRET_KEY = os.getenv('ACCESS_SECRET_KEY')
 ACCESS_REFRESH_SECRET_KEY = os.getenv('ACCESS_REFRESH_SECRET_KEY')
+PASSWORD_RESET_SECRET_KEY = os.getenv('PASSWORD_RESET_SECRET_KEY')
 ALGORITHM = os.getenv('ALGORITHM')
 
 

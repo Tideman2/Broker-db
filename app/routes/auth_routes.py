@@ -1,7 +1,14 @@
 from fastapi import APIRouter, Depends
 
 from app.services import user_services
-from app.Models.auth_models import User, LoginUserRequest, RefreshTokenRequest
+from app.Models.auth_models import (
+    User,
+    LoginUserRequest,
+    RefreshTokenRequest,
+    ForgotPasswordRequest,
+    ResetPasswordRequest,
+    VerifyOTPRequest
+)
 from app.utils.jwt import get_current_user
 
 
@@ -59,3 +66,30 @@ def delete_user(user=Depends(get_current_user)):
      and enforce jwt auth
     """
     return user_services.delete_user(user_id=user.user_id)
+
+
+@auth_router.post("/forgot-password")
+async def forgot_password(payload: ForgotPasswordRequest):
+    """
+     Route handler to send otp to user email for password reset
+    """
+    response = await user_services.send_password_reset_otp(payload.email)
+    return response
+
+
+@auth_router.post("/verify-otp")
+async def verify_otp(payload: VerifyOTPRequest):
+    """
+     Route handler to verify otp sent to user email for password reset
+    """
+    response = await user_services.verify_password_reset_otp(payload.email, payload.otp)
+    return response
+
+
+@auth_router.post("/reset-password")
+async def reset_password(payload: ResetPasswordRequest):
+    """
+     Route handler to reset user password
+    """
+    response = await user_services.reset_password(payload.email, payload.new_password)
+    return response

@@ -11,8 +11,6 @@ from app.Models.auth_models import (
 
 from app.email import email_service
 from app.templates import template_env
-from app.services.redis_service import redis_client
-from app.utils.redis import store_access_token_in_redis
 
 from app.Models.wallet_models import (
     AddBankDestinationRequest,
@@ -44,7 +42,20 @@ from app.utils.wallet import (
 
 
 from app.utils.password import hash_password, verify_password
-from app.utils.jwt import ACCESS_SECRET_KEY, ACCESS_REFRESH_SECRET_KEY, create_token, decode_token
+from app.utils.jwt import (
+    ACCESS_SECRET_KEY,
+    ACCESS_REFRESH_SECRET_KEY,
+    PASSWORD_RESET_SECRET_KEY,
+    create_token, decode_token
+)
+from app.utils.redis import store_access_token_in_redis, store_otp_secret_redis, get_otp_secret_redis
+from app.utils.otp import (
+    generate_otp,
+    generate_otp_secret,
+    verify_otp,
+    delete_otp_secret_redis,
+    OTP_INTERVAL
+)
 
 
 async def create_user(data: User) -> CreateUserResponse:
@@ -464,6 +475,173 @@ def get_withdraw_destinations(
         raise
 
     except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        ) from e
+
+    finally:
+        cursor.close()
+        conn.close()
+
+
+# ============================
+# PASSWORD RESET
+# ============================
+
+async def send_password_reset_otp(email: str):
+    """
+    Function to send a password reset OTP to the user's email.
+    """
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    try:
+        # Check if user exists
+        cursor.execute(GET_USER_BY_EMAIL, (email,))
+        user = cursor.fetchone()
+
+        if not user:
+            raise HTTPException(
+                status_code=404,
+                detail="User not found"
+            )
+
+        # Generate OTP
+        otp_secret = generate_otp_secret()
+        otp = generate_otp(otp_secret)
+        # Store OTP secret in Redis with 5 minutes expiration
+        await store_otp_secret_redis(user["id"], otp_secret)
+
+        # Send OTP email
+        template = template_env.get_template("otp_mail.html")
+        html_content = template.render(
+            email=email,
+            otp=otp
+        )
+
+        email_service.send_email(
+            to=email,
+            subject="Password Reset OTP",
+            body=f"Your password reset OTP.",
+            html_body=html_content
+        )
+
+        # 5 minutes in seconds
+        return {"message": "OTP sent to email", "timeout": OTP_INTERVAL}
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        ) from e
+
+    finally:
+        cursor.close()
+        conn.close()
+
+
+async def verify_password_reset_otp(email: str, otp: str):
+    """
+    Function to verify the password reset OTP.
+    Create a new OTP secret for the user and store it in Redis with a 5-minute expiration.
+    Create a new token for password reset and store it in Redis with no expiration
+    Password reset token will be removed from Redis after password reset is complete.
+    """
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        # Check if user exists
+        cursor.execute(GET_USER_BY_EMAIL, (email,))
+        user = cursor.fetchone()
+
+        if not user:
+            raise HTTPException(
+                status_code=404,
+                detail="User not found"
+            )
+        # Retrieve OTP secret from Redis
+        otp_secret = await get_otp_secret_redis(user["id"])
+
+        if not otp_secret:
+            raise HTTPException(
+                status_code=400,
+                detail="OTP has expired or is invalid"
+            )
+
+        # Verify OTP
+        if not verify_otp(secret=otp_secret, otp=otp):
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid OTP"
+            )
+
+        await delete_otp_secret_redis(user["id"])
+
+        cursor.execute(GET_USER_BY_EMAIL, (email,))
+        user = cursor.fetchone()
+
+        if not user:
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid credentials"
+            )
+
+        password_resettoken = create_token(
+            user["id"],
+            user["role"],
+            PASSWORD_RESET_SECRET_KEY,
+            expiration_hours=1
+        )
+        return {"message": "OTP verified successfully", "password_reset_token": password_resettoken}
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        ) from e
+
+
+async def reset_password(email: str, new_password: str, ):
+    """
+    Function to reset the user's password.
+    """
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        # Check if user exists
+        cursor.execute(GET_USER_BY_EMAIL, (email,))
+        user = cursor.fetchone()
+
+        if not user:
+            raise HTTPException(
+                status_code=404,
+                detail="User not found"
+            )
+
+        # Hash the new password
+        hashed_password = hash_password(new_password)
+
+        # Update the user's password in the database
+        cursor.execute(
+            "UPDATE users SET password_hash = %s WHERE id = %s",
+            (hashed_password, user["id"])
+        )
+        conn.commit()
+
+        return {"message": "Password reset successfully"}
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        conn.rollback()
         raise HTTPException(
             status_code=500,
             detail=str(e)

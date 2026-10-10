@@ -106,3 +106,44 @@ class LoginUserRequest(BaseModel):
 
 class RefreshTokenRequest(BaseModel):
     token: str
+
+# PASSWORD
+
+
+class ChangePasswordRequest(BaseModel):
+    """
+    Change password request type
+    """
+    new_password: str = Field(
+        min_length=8,
+        max_length=100
+    )
+
+
+class ForgotPasswordRequest(BaseModel):
+    """
+    Forgot password request type
+    """
+    email: EmailStr
+
+
+class VerifyOTPRequest(BaseModel):
+    """
+    Verify OTP request type
+    """
+    email: EmailStr
+    otp: str = Field(
+        min_length=6,
+        max_length=6
+    )
+
+
+class ResetPasswordRequest(BaseModel):
+    """
+    Reset password request type
+    """
+    email: EmailStr
+    new_password: str = Field(
+        min_length=8,
+        max_length=100
+    )
