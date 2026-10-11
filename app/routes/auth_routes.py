@@ -50,11 +50,11 @@ def fetch_user(user=Depends(get_current_user)):
 
 
 @auth_router.post("/refresh")
-def refresh_token(data: RefreshTokenRequest):
+async def refresh_token(data: RefreshTokenRequest):
     """
     Route handler sign a new token with the user id and full name
     """
-    new_token = user_services.generate_new_token(data.token)
+    new_token = await user_services.generate_new_token(data.token)
     return {"token": new_token}
 
 
@@ -91,5 +91,5 @@ async def reset_password(payload: ResetPasswordRequest):
     """
      Route handler to reset user password
     """
-    response = await user_services.reset_password(payload.email, payload.new_password)
+    response = await user_services.reset_password(payload.email, payload.new_password, payload.reset_token)
     return response

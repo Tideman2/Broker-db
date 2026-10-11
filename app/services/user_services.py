@@ -48,12 +48,20 @@ from app.utils.jwt import (
     PASSWORD_RESET_SECRET_KEY,
     create_token, decode_token
 )
-from app.utils.redis import store_access_token_in_redis, store_otp_secret_redis, get_otp_secret_redis
+from app.utils.redis import (
+    store_access_token_in_redis,
+    store_otp_secret_redis,
+    get_otp_secret_redis,
+    delete_otp_secret_redis,
+    store_reset_password_token_redis,
+    get_reset_password_token_redis,
+    delete_reset_password_token_redis,
+)
+
 from app.utils.otp import (
     generate_otp,
     generate_otp_secret,
     verify_otp,
-    delete_otp_secret_redis,
     OTP_INTERVAL
 )
 
@@ -581,22 +589,27 @@ async def verify_password_reset_otp(email: str, otp: str):
 
         await delete_otp_secret_redis(user["id"])
 
-        cursor.execute(GET_USER_BY_EMAIL, (email,))
-        user = cursor.fetchone()
-
         if not user:
             raise HTTPException(
                 status_code=401,
                 detail="Invalid credentials"
             )
 
-        password_resettoken = create_token(
+        # create password reset token and store it in Redis with 1 hour expiration
+        password_reset_token = create_token(
             user["id"],
             user["role"],
             PASSWORD_RESET_SECRET_KEY,
             expiration_hours=1
         )
-        return {"message": "OTP verified successfully", "password_reset_token": password_resettoken}
+
+        await store_reset_password_token_redis(
+            user_id=str(user["id"]),
+            token=password_reset_token,
+            expiration_seconds=3600  # 1 hour in seconds
+        )
+
+        return {"message": "OTP verified successfully", "password_reset_token": password_reset_token}
 
     except HTTPException:
         raise
@@ -608,7 +621,7 @@ async def verify_password_reset_otp(email: str, otp: str):
         ) from e
 
 
-async def reset_password(email: str, new_password: str, ):
+async def reset_password(email: str, new_password: str, password_reset_token: str):
     """
     Function to reset the user's password.
     """
@@ -624,6 +637,22 @@ async def reset_password(email: str, new_password: str, ):
                 status_code=404,
                 detail="User not found"
             )
+        # Decode the password reset tokenxx
+        payload = decode_token(password_reset_token, type="password_reset")
+
+        if payload["user_id"] != user["id"]:
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid password reset token for this user"
+            )
+
+        stored_token = await get_reset_password_token_redis(str(user["id"]))
+
+        if stored_token != password_reset_token:
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid or expired password reset token"
+            )
 
         # Hash the new password
         hashed_password = hash_password(new_password)
@@ -634,6 +663,9 @@ async def reset_password(email: str, new_password: str, ):
             (hashed_password, user["id"])
         )
         conn.commit()
+
+        # Delete the password reset token from Redis
+        await delete_reset_password_token_redis(str(user["id"]))
 
         return {"message": "Password reset successfully"}
 

@@ -84,3 +84,9 @@ async def get_reset_password_token_redis(user_id: str) -> str | None:
     """Retrieve a user's stored reset password token."""
     redis_key = format_redis_key(user_id, "reset_password_token")
     return await redis_client.get(redis_key)
+
+
+async def delete_reset_password_token_redis(user_id: str) -> int:
+    """Delete a user's stored reset password token. Returns the number of keys deleted."""
+    redis_key = format_redis_key(user_id, "reset_password_token")
+    return await redis_client.delete(redis_key)

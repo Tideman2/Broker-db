@@ -46,13 +46,15 @@ def decode_token(token: str, type: str = "access"):
      function to decode jwt token and get payload
     type is passed as an argument to the function to allow for different secret keys for access and refresh tokens
     """
-    SECRET_KEY = ACCESS_SECRET_KEY if type == "access" else ACCESS_REFRESH_SECRET_KEY
+    SECRET_KEY = ACCESS_SECRET_KEY if type == "access" else ACCESS_REFRESH_SECRET_KEY if type == "refresh" else PASSWORD_RESET_SECRET_KEY
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         return payload
+
     except jwt.ExpiredSignatureError:
         which_token = ("access" if type ==
-                       "access" else "refresh").capitalize()
+                       "access" else "refresh" if type ==
+                       "refresh" else "password_reset").capitalize()
         raise HTTPException(
             status_code=401, detail=f"{which_token} token has expired")
 

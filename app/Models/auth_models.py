@@ -147,3 +147,4 @@ class ResetPasswordRequest(BaseModel):
         min_length=8,
         max_length=100
     )
+    reset_token: str
