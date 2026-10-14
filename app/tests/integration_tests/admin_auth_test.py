@@ -80,10 +80,61 @@ class TestAdminAuthParity:
         me = api.get("/admin/me", headers=_auth(new_token))
         assert me.status_code == 200, me.text
 
+    def test_admin_refresh_rejects_user_role_token(self, api):
+        from app.utils.jwt import (
+            create_token, ACCESS_REFRESH_SECRET_KEY,
+        )
+
+        user_refresh = create_token(
+            999999, "USER", ACCESS_REFRESH_SECRET_KEY, expiration_hours=24 * 7
+        )
+        response = api.post("/admin/refresh", json={"token": user_refresh})
+        assert response.status_code == 403, response.text
+
+    def test_reset_revokes_old_session(
+        self, api, admin_account, redis_reader
+    ):
+        from app.utils.redis import format_redis_key
+
+        email = admin_account["email"]
+        old_token = admin_account["token"]
+
+        assert (
+            api.get("/admin/me", headers=_auth(old_token)).status_code == 200
+        )
+
+        forgot = api.post("/admin/forgot-password", json={"email": email})
+        assert forgot.status_code == 200, forgot.text
+
+        secret = redis_reader.get(
+            format_redis_key(str(admin_account["id"]), "otp", "ADMIN")
+        )
+        assert secret, "OTP secret was not stored for admin"
+
+        verify = api.post(
+            "/admin/verify-otp",
+            json={"email": email, "otp": generate_otp(secret)},
+        )
+        assert verify.status_code == 200, verify.text
+
+        reset = api.post(
+            "/admin/reset-password",
+            json={
+                "email": email,
+                "new_password": "NewPassword456",
+                "reset_token": verify.json()["password_reset_token"],
+            },
+        )
+        assert reset.status_code == 200, reset.text
+
+        revoked = api.get("/admin/me", headers=_auth(old_token))
+        assert revoked.status_code == 401, revoked.text
+
     def test_full_password_reset_loop(self, api, admin_account, redis_reader):
         email = admin_account["email"]
 
         forgot = api.post("/admin/forgot-password", json={"email": email})
+
         assert forgot.status_code == 200, forgot.text
 
         secret = redis_reader.get(f"user:{admin_account['id']}:otp:ADMIN")

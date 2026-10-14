@@ -516,6 +516,22 @@ def get_admin(admin_id: int):
         conn.close()
 
 
+async def generate_new_admin_token(token: str) -> str:
+    """
+    function that checks the refresh token belongs to an admin
+    and generates a new admin access token from it
+    """
+    payload = decode_token(token, type="refresh")
+
+    if payload.get("role") != UserRole.ADMIN:
+        raise HTTPException(
+            status_code=403,
+            detail="Admin privileges required."
+        )
+
+    return await generate_new_token(token)
+
+
 async def logout_admin(admin_id: int):
     """
     function to log out an admin by deleting the session token from redis
@@ -637,6 +653,10 @@ async def verify_admin_password_reset_otp(email: str, otp: str):
             detail=str(e)
         ) from e
 
+    finally:
+        cursor.close()
+        conn.close()
+
 
 async def reset_admin_password(email: str, new_password: str, password_reset_token: str):
     """
@@ -678,6 +698,10 @@ async def reset_admin_password(email: str, new_password: str, password_reset_tok
             (hashed_password, admin["id"])
         )
         conn.commit()
+
+        # Revoke the existing access session on password reset
+        await delete_access_token_from_redis(
+            str(admin["id"]), user_role=UserRole.ADMIN)
 
         await delete_reset_password_token_redis(
             str(admin["id"]), user_role=UserRole.ADMIN)
@@ -854,6 +878,10 @@ async def verify_password_reset_otp(email: str, otp: str):
             status_code=500,
             detail=str(e)
         ) from e
+
+    finally:
+        cursor.close()
+        conn.close()
 
 
 async def reset_password(email: str, new_password: str, password_reset_token: str):

@@ -50,9 +50,9 @@ def fetch_admin(user=Depends(require_admin)):
 @admin_router.post("/refresh")
 async def refresh_admin_token(data: RefreshTokenRequest):
     """
-    Route handler to sign a new admin token from a refresh token
+    Route handler to sign a new admin token from an admin refresh token
     """
-    new_token = await user_services.generate_new_token(data.token)
+    new_token = await user_services.generate_new_admin_token(data.token)
     return {"token": new_token}
 
 
