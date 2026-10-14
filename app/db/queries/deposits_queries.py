@@ -21,7 +21,6 @@ REJECT_DEPOSIT = """
 UPDATE deposits
 SET status = 'rejected'
 WHERE id = %s
-AND user_id = %s
 AND status = 'pending';
 """
 

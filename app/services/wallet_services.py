@@ -199,7 +199,6 @@ def get__deposit(deposit_id):
 
 
 def reject_deposit(
-    user_id: int,
     deposit_id: int
 ):
     """
@@ -210,7 +209,7 @@ def reject_deposit(
     cursor = conn.cursor(dictionary=True)
 
     try:
-        _reject_deposit_record(cursor, deposit_id, user_id)
+        _reject_deposit_record(cursor, deposit_id)
 
         deposit = _get_deposit_record(cursor, deposit_id)
 

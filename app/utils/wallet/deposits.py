@@ -80,12 +80,12 @@ def _confirm_deposit_record(cursor, confirmed_at, deposit_id: int):
         )
 
 
-def _reject_deposit_record(cursor, deposit_id: int, user_id: int):
+def _reject_deposit_record(cursor, deposit_id: int):
     """
     Reject's deposit in db or raise a 400 error.
     """
 
-    cursor.execute(REJECT_DEPOSIT,  (deposit_id, user_id,))
+    cursor.execute(REJECT_DEPOSIT,  (deposit_id,))
 
     if cursor.rowcount == 0:
         raise HTTPException(

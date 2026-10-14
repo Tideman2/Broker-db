@@ -92,7 +92,6 @@ def reject_deposit_endpoint(
     Reject a deposit.
     """
     return reject_deposit(
-        user_id=user.user_id,
         deposit_id=deposit_id
     )
 
