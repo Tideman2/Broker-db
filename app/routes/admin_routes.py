@@ -1,5 +1,5 @@
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from app.services import user_services
 from app.Models.auth_models import (
     Admin,
@@ -103,8 +103,8 @@ async def admin_reset_password(payload: ResetPasswordRequest):
 
 @admin_router.get("/users", response_model=list[AdminUserListItem])
 def list_users_endpoint(
-    limit: int = 10,
-    offset: int = 0,
+    limit: int = Query(10, ge=1, le=100),
+    offset: int = Query(0, ge=0),
     user=Depends(require_admin)
 ):
     """
@@ -142,8 +142,8 @@ async def delete_user_as_admin_endpoint(
 
 @admin_router.get("/list", response_model=list[AdminPublic])
 def list_admins_endpoint(
-    limit: int = 10,
-    offset: int = 0,
+    limit: int = Query(10, ge=1, le=100),
+    offset: int = Query(0, ge=0),
     user=Depends(require_admin)
 ):
     """

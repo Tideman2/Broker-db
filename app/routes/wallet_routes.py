@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 
 from app.utils.jwt import get_current_user, require_admin
 
@@ -194,8 +194,8 @@ def get_user_balance_endpoint(
 )
 def get_all_deposits_endpoint(
     status: DepositStatus | None = None,
-    limit: int = 10,
-    offset: int = 0,
+    limit: int = Query(10, ge=1, le=100),
+    offset: int = Query(0, ge=0),
     user=Depends(require_admin)
 ):
     """
@@ -214,8 +214,8 @@ def get_all_deposits_endpoint(
 )
 def get_all_withdrawals_endpoint(
     status: WithdrawStatus | None = None,
-    limit: int = 10,
-    offset: int = 0,
+    limit: int = Query(10, ge=1, le=100),
+    offset: int = Query(0, ge=0),
     user=Depends(require_admin)
 ):
     """

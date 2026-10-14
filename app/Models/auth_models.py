@@ -90,19 +90,21 @@ class UserResponse(BaseModel):
     """
     Safe user information returned by the API.
     Never includes sensitive information such as passwords.
+    Address fields are optional: a user row may exist
+    without a joined address row.
     """
     id: int
-    country: str
+    country: str | None = None
     email: EmailStr
     full_name: str
     phone: str
     dob: Optional[str] = None
     username: Optional[str] = None
-    address1: str
+    address1: str | None = None
     address2: Optional[str] = None
-    city: str
-    state: str
-    zip: str
+    city: str | None = None
+    state: str | None = None
+    zip: str | None = None
     role: UserRole
 
 

@@ -49,3 +49,9 @@ FROM users
 ORDER BY created_at DESC
 LIMIT %s OFFSET %s
 """
+
+USER_EXISTS = """
+SELECT id
+FROM users
+WHERE id = %s
+"""

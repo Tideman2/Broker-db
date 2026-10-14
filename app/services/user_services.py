@@ -28,6 +28,7 @@ from app.db.queries.user_queries import (
     GET_USER_BY_ID,
     GET_USER_BY_EMAIL,
     GET_ALL_USERS,
+    USER_EXISTS,
     DELETE_USER
 )
 
@@ -64,6 +65,9 @@ from app.utils.jwt import (
 from app.utils.redis import (
     store_access_token_in_redis,
     delete_access_token_from_redis,
+    store_refresh_token_in_redis,
+    get_refresh_token_from_redis,
+    delete_refresh_token_from_redis,
     store_otp_secret_redis,
     get_otp_secret_redis,
     delete_otp_secret_redis,
@@ -166,6 +170,8 @@ def get_user(user_id) -> User:
     """
     function to get user info from db
     """
+    conn = None
+    cursor = None
     try:
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -198,14 +204,17 @@ def get_user(user_id) -> User:
     except HTTPException:
         raise
     except Exception as e:
-        conn.rollback()
+        if conn is not None:
+            conn.rollback()
         raise HTTPException(
             status_code=500,
             detail=str(e)
         ) from e
     finally:
-        cursor.close()
-        conn.close()
+        if cursor is not None:
+            cursor.close()
+        if conn is not None:
+            conn.close()
 
 
 async def check_if_email_and_password_is_correct(data: LoginUserRequest):
@@ -271,6 +280,29 @@ async def generate_new_token(token: str) -> str:
     user = decode_token(token, type="refresh")
     user_id = user["user_id"]
     role = user["role"]
+
+    conn = None
+    cursor = None
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        if role == UserRole.ADMIN:
+            cursor.execute(GET_ADMIN_BY_ID, (user_id,))
+        else:
+            cursor.execute(USER_EXISTS, (user_id,))
+
+        if not cursor.fetchone():
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid refresh token"
+            )
+    finally:
+        if cursor is not None:
+            cursor.close()
+        if conn is not None:
+            conn.close()
+
     access_token = create_token(
         user_id, role, ACCESS_SECRET_KEY)
 
@@ -474,6 +506,9 @@ async def update_admin(admin_id: int, data: AdminUpdateRequest):
         await delete_access_token_from_redis(
             str(admin_id), user_role=UserRole.ADMIN)
 
+        await delete_refresh_token_from_redis(
+            str(admin_id), user_role=UserRole.ADMIN)
+
         return AdminPublic(id=admin_id, email=new_email, role=admin["role"])
 
     except HTTPException:
@@ -522,6 +557,9 @@ async def delete_admin(admin_id: int, current_admin_id: int):
         conn.commit()
 
         await delete_access_token_from_redis(
+            str(admin_id), user_role=UserRole.ADMIN)
+
+        await delete_refresh_token_from_redis(
             str(admin_id), user_role=UserRole.ADMIN)
 
         return {"message": "Admin deleted", "id": admin_id}
@@ -667,6 +705,13 @@ async def create_admin(data: Admin) -> CreateUserResponse:
         refresh_token = create_token(
             admin_id, "ADMIN", ACCESS_REFRESH_SECRET_KEY, expiration_hours=24*7)
 
+        await store_refresh_token_in_redis(
+            user_id=str(admin_id),
+            token=refresh_token,
+            expiration_seconds=3600*24*7,
+            user_role=UserRole.ADMIN
+        )
+
         return {"id": admin_id, "message": "Admin created", "token": access_token, "refresh_token": refresh_token}
 
     except Exception as e:
@@ -720,6 +765,13 @@ async def check_if_admin_email_and_password_is_correct(data: LoginUserRequest):
         refresh_token = create_token(
             admin["id"], admin["role"], ACCESS_REFRESH_SECRET_KEY, expiration_hours=24*7)
 
+        await store_refresh_token_in_redis(
+            user_id=str(admin["id"]),
+            token=refresh_token,
+            expiration_seconds=3600*24*7,
+            user_role=UserRole.ADMIN
+        )
+
         return {"token": accesse_token, "refresh_token": refresh_token}
 
     except HTTPException:
@@ -740,6 +792,8 @@ def get_admin(admin_id: int):
     """
     function to get admin info from db
     """
+    conn = None
+    cursor = None
     try:
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -767,8 +821,10 @@ def get_admin(admin_id: int):
             detail=str(e)
         ) from e
     finally:
-        cursor.close()
-        conn.close()
+        if cursor is not None:
+            cursor.close()
+        if conn is not None:
+            conn.close()
 
 
 async def generate_new_admin_token(token: str) -> str:
@@ -784,14 +840,28 @@ async def generate_new_admin_token(token: str) -> str:
             detail="Admin privileges required."
         )
 
+    stored_refresh = await get_refresh_token_from_redis(
+        str(payload.get("user_id")), user_role=UserRole.ADMIN)
+
+    if stored_refresh != token:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid refresh token"
+        )
+
     return await generate_new_token(token)
 
 
 async def logout_admin(admin_id: int):
     """
-    function to log out an admin by deleting the session token from redis
+    function to log out an admin by deleting the session
+    and refresh tokens from redis
     """
     await delete_access_token_from_redis(
+        user_id=str(admin_id),
+        user_role=UserRole.ADMIN
+    )
+    await delete_refresh_token_from_redis(
         user_id=str(admin_id),
         user_role=UserRole.ADMIN
     )
@@ -956,6 +1026,9 @@ async def reset_admin_password(email: str, new_password: str, password_reset_tok
 
         # Revoke the existing access session on password reset
         await delete_access_token_from_redis(
+            str(admin["id"]), user_role=UserRole.ADMIN)
+
+        await delete_refresh_token_from_redis(
             str(admin["id"]), user_role=UserRole.ADMIN)
 
         await delete_reset_password_token_redis(

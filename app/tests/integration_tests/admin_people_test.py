@@ -44,7 +44,12 @@ def user_account(api):
     reg = api.post("/auth/register", json=payload)
     assert reg.status_code == 200, reg.text
     body = reg.json()
-    yield {"id": body["id"], "email": payload["email"], "token": body["token"]}
+    yield {
+        "id": body["id"],
+        "email": payload["email"],
+        "token": body["token"],
+        "refresh_token": body.get("refresh_token"),
+    }
 
     conn = get_connection()
     cursor = conn.cursor()
@@ -96,6 +101,93 @@ class TestAdminPeople:
             headers=_auth(admin_account["token"]),
         )
         assert gone.status_code == 404, gone.text
+
+    def test_deleted_user_refresh_rejected(
+        self, api, admin_account, user_account
+    ):
+        delete = api.delete(
+            f"/admin/users/{user_account['id']}",
+            headers=_auth(admin_account["token"]),
+        )
+        assert delete.status_code == 200, delete.text
+
+        refresh = api.post(
+            "/auth/refresh", json={"token": user_account["refresh_token"]}
+        )
+        assert refresh.status_code == 401, refresh.text
+
+    def test_deleted_admin_refresh_rejected(self, api, admin_account):
+        second = api.post(
+            "/admin/register",
+            json={
+                "email": f"ppl-doomed3-{uuid.uuid4().hex[:8]}@example.com",
+                "password": "Password123",
+            },
+        )
+        assert second.status_code == 200, second.text
+        doomed_refresh = second.json()["refresh_token"]
+
+        api.delete(
+            f"/admin/{second.json()['id']}",
+            headers=_auth(admin_account["token"]),
+        )
+
+        refresh = api.post("/admin/refresh", json={"token": doomed_refresh})
+        assert refresh.status_code == 401, refresh.text
+
+    def test_logout_rejects_refresh(self, api, admin_account):
+        session = api.post(
+            "/admin/login",
+            json={"email": admin_account["email"], "password": "Password123"},
+        ).json()
+
+        logout = api.post("/admin/logout", headers=_auth(session["token"]))
+        assert logout.status_code == 200, logout.text
+
+        refresh = api.post(
+            "/admin/refresh", json={"token": session["refresh_token"]}
+        )
+        assert refresh.status_code == 401, refresh.text
+
+    def test_password_change_rejects_old_refresh(self, api, admin_account):
+        session = api.post(
+            "/admin/login",
+            json={"email": admin_account["email"], "password": "Password123"},
+        ).json()
+
+        response = api.patch(
+            f"/admin/{admin_account['id']}",
+            json={"password": "ChangedPass321"},
+            headers=_auth(session["token"]),
+        )
+        assert response.status_code == 200, response.text
+
+        refresh = api.post(
+            "/admin/refresh", json={"token": session["refresh_token"]}
+        )
+        assert refresh.status_code == 401, refresh.text
+
+    def test_addressless_user_returns_nulls(
+        self, api, admin_account, user_account
+    ):
+        from app.db.connection import get_connection
+
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "DELETE FROM user_addresses WHERE user_id = %s",
+            (user_account["id"],),
+        )
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+        response = api.get(
+            f"/admin/users/{user_account['id']}",
+            headers=_auth(admin_account["token"]),
+        )
+        assert response.status_code == 200, response.text
+        assert response.json()["address1"] is None
 
     def test_non_admin_forbidden_on_people_routes(
         self, api, admin_account, user_account
