@@ -1,6 +1,6 @@
 
 from fastapi import APIRouter, Depends, Query
-from app.services import user_services
+from app.services import user_services, admin_services
 from app.Models.auth_models import (
     Admin,
     AdminPublic,
@@ -26,7 +26,7 @@ async def register_admin(payload: Admin):
     """
      function to register Admin.
     """
-    response = await user_services.create_admin(payload)
+    response = await admin_services.create_admin(payload)
     return response
 
 
@@ -35,7 +35,7 @@ async def login_admin(payload: LoginUserRequest):
     """
      Route handler to admin loigin,
     """
-    response = await user_services.check_if_admin_email_and_password_is_correct(
+    response = await admin_services.check_if_admin_email_and_password_is_correct(
         payload
     )
 
@@ -48,7 +48,7 @@ def fetch_admin(user=Depends(require_admin)):
      Route handler to get current admin,
      enforces jwt auth and admin role
     """
-    return user_services.get_admin(admin_id=user.user_id)
+    return admin_services.get_admin(admin_id=user.user_id)
 
 
 @admin_router.post("/refresh")
@@ -56,7 +56,7 @@ async def refresh_admin_token(data: RefreshTokenRequest):
     """
     Route handler to sign a new admin token from an admin refresh token
     """
-    new_token = await user_services.generate_new_admin_token(data.token)
+    new_token = await admin_services.generate_new_admin_token(data.token)
     return {"token": new_token}
 
 
@@ -66,7 +66,7 @@ async def logout_admin(user=Depends(require_admin)):
      Route handler to log out admin,
      deletes the session token from redis
     """
-    return await user_services.logout_admin(admin_id=user.user_id)
+    return await admin_services.logout_admin(admin_id=user.user_id)
 
 
 @admin_router.post("/forgot-password")
@@ -74,7 +74,7 @@ async def admin_forgot_password(payload: ForgotPasswordRequest):
     """
      Route handler to send otp to admin email for password reset
     """
-    response = await user_services.send_admin_password_reset_otp(payload.email)
+    response = await admin_services.send_admin_password_reset_otp(payload.email)
     return response
 
 
@@ -83,7 +83,7 @@ async def admin_verify_otp(payload: VerifyOTPRequest):
     """
      Route handler to verify otp sent to admin email for password reset
     """
-    response = await user_services.verify_admin_password_reset_otp(payload.email, payload.otp)
+    response = await admin_services.verify_admin_password_reset_otp(payload.email, payload.otp)
     return response
 
 
@@ -92,7 +92,7 @@ async def admin_reset_password(payload: ResetPasswordRequest):
     """
      Route handler to reset admin password
     """
-    response = await user_services.reset_admin_password(payload.email, payload.new_password, payload.reset_token)
+    response = await admin_services.reset_admin_password(payload.email, payload.new_password, payload.reset_token)
     return response
 
 
@@ -110,7 +110,7 @@ def list_users_endpoint(
     """
     List paginated users for admin.
     """
-    return user_services.list_users(limit=limit, offset=offset)
+    return admin_services.list_users(limit=limit, offset=offset)
 
 
 @admin_router.get("/users/{user_id}", response_model=UserResponse)
@@ -132,7 +132,7 @@ async def delete_user_as_admin_endpoint(
     """
     Hard delete a user for admin.
     """
-    return await user_services.delete_user_as_admin(user_id=user_id)
+    return await admin_services.delete_user_as_admin(user_id=user_id)
 
 
 # ======================================================
@@ -149,7 +149,7 @@ def list_admins_endpoint(
     """
     List paginated admins.
     """
-    return user_services.list_admins(limit=limit, offset=offset)
+    return admin_services.list_admins(limit=limit, offset=offset)
 
 
 @admin_router.get("/{admin_id}", response_model=AdminPublic)
@@ -160,7 +160,7 @@ def fetch_admin_by_id(
     """
     Get a single admin by id.
     """
-    return user_services.get_admin(admin_id=admin_id)
+    return admin_services.get_admin(admin_id=admin_id)
 
 
 @admin_router.patch("/{admin_id}", response_model=AdminPublic)
@@ -172,7 +172,7 @@ async def update_admin_endpoint(
     """
     Update an admin's email and/or password.
     """
-    return await user_services.update_admin(admin_id=admin_id, data=payload)
+    return await admin_services.update_admin(admin_id=admin_id, data=payload)
 
 
 @admin_router.delete("/{admin_id}")
@@ -183,6 +183,6 @@ async def delete_admin_endpoint(
     """
     Delete another admin. Self-delete is rejected.
     """
-    return await user_services.delete_admin(
+    return await admin_services.delete_admin(
         admin_id=admin_id, current_admin_id=user.user_id
     )
