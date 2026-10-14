@@ -1,5 +1,7 @@
 from fastapi import HTTPException
 
+from mysql.connector.errors import IntegrityError
+
 from app.db.connection import get_connection
 from app.Models.auth_models import (
     User,
@@ -314,6 +316,8 @@ def list_users(limit: int = 10, offset: int = 0):
     """
     Admin function to list paginated users.
     """
+    conn = None
+    cursor = None
     try:
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -338,16 +342,21 @@ def list_users(limit: int = 10, offset: int = 0):
             detail=str(e)
         ) from e
     finally:
-        cursor.close()
-        conn.close()
+        if cursor is not None:
+            cursor.close()
+        if conn is not None:
+            conn.close()
 
 
-def delete_user_as_admin(user_id: int):
+async def delete_user_as_admin(user_id: int):
     """
     Admin function to hard delete a user from db.
     Related wallet, address, destination, subscription and
     transaction rows cascade via foreign keys.
+    The user's session token is revoked.
     """
+    conn = None
+    cursor = None
     try:
         conn = get_connection()
         cursor = conn.cursor()
@@ -362,26 +371,35 @@ def delete_user_as_admin(user_id: int):
 
         conn.commit()
 
+        await delete_access_token_from_redis(
+            str(user_id), user_role=UserRole.USER)
+
         return {"message": "User deleted", "id": user_id}
 
     except HTTPException:
-        conn.rollback()
+        if conn is not None:
+            conn.rollback()
         raise
     except Exception as e:
-        conn.rollback()
+        if conn is not None:
+            conn.rollback()
         raise HTTPException(
             status_code=500,
             detail=str(e)
         ) from e
     finally:
-        cursor.close()
-        conn.close()
+        if cursor is not None:
+            cursor.close()
+        if conn is not None:
+            conn.close()
 
 
 def list_admins(limit: int = 10, offset: int = 0):
     """
     Admin function to list paginated admins.
     """
+    conn = None
+    cursor = None
     try:
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -404,13 +422,16 @@ def list_admins(limit: int = 10, offset: int = 0):
             detail=str(e)
         ) from e
     finally:
-        cursor.close()
-        conn.close()
+        if cursor is not None:
+            cursor.close()
+        if conn is not None:
+            conn.close()
 
 
-def update_admin(admin_id: int, data: AdminUpdateRequest):
+async def update_admin(admin_id: int, data: AdminUpdateRequest):
     """
     Admin function to update an admin's email and/or password.
+    The admin's session token is revoked.
     """
     if data.email is None and data.password is None:
         raise HTTPException(
@@ -418,6 +439,8 @@ def update_admin(admin_id: int, data: AdminUpdateRequest):
             detail="Nothing to update."
         )
 
+    conn = None
+    cursor = None
     try:
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -438,28 +461,43 @@ def update_admin(admin_id: int, data: AdminUpdateRequest):
             else admin["password_hash"]
         )
 
-        cursor.execute(UPDATE_ADMIN, (new_email, new_hash, admin_id))
+        try:
+            cursor.execute(UPDATE_ADMIN, (new_email, new_hash, admin_id))
+        except IntegrityError as e:
+            raise HTTPException(
+                status_code=409,
+                detail="Email already in use."
+            ) from e
+
         conn.commit()
+
+        await delete_access_token_from_redis(
+            str(admin_id), user_role=UserRole.ADMIN)
 
         return AdminPublic(id=admin_id, email=new_email, role=admin["role"])
 
     except HTTPException:
-        conn.rollback()
+        if conn is not None:
+            conn.rollback()
         raise
     except Exception as e:
-        conn.rollback()
+        if conn is not None:
+            conn.rollback()
         raise HTTPException(
             status_code=500,
             detail=str(e)
         ) from e
     finally:
-        cursor.close()
-        conn.close()
+        if cursor is not None:
+            cursor.close()
+        if conn is not None:
+            conn.close()
 
 
-def delete_admin(admin_id: int, current_admin_id: int):
+async def delete_admin(admin_id: int, current_admin_id: int):
     """
     Admin function to delete another admin. Self-delete is rejected.
+    The deleted admin's session token is revoked.
     """
     if admin_id == current_admin_id:
         raise HTTPException(
@@ -467,6 +505,8 @@ def delete_admin(admin_id: int, current_admin_id: int):
             detail="Admins cannot delete themselves."
         )
 
+    conn = None
+    cursor = None
     try:
         conn = get_connection()
         cursor = conn.cursor()
@@ -481,20 +521,27 @@ def delete_admin(admin_id: int, current_admin_id: int):
 
         conn.commit()
 
+        await delete_access_token_from_redis(
+            str(admin_id), user_role=UserRole.ADMIN)
+
         return {"message": "Admin deleted", "id": admin_id}
 
     except HTTPException:
-        conn.rollback()
+        if conn is not None:
+            conn.rollback()
         raise
     except Exception as e:
-        conn.rollback()
+        if conn is not None:
+            conn.rollback()
         raise HTTPException(
             status_code=500,
             detail=str(e)
         ) from e
     finally:
-        cursor.close()
-        conn.close()
+        if cursor is not None:
+            cursor.close()
+        if conn is not None:
+            conn.close()
 
 
 def add_bank_withdraw_destination(user_id: int, destination: AddBankDestinationRequest):

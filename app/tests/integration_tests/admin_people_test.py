@@ -147,6 +147,98 @@ class TestAdminPeople:
         )
         assert response.status_code == 400, response.text
 
+    def test_deleted_user_session_revoked(
+        self, api, admin_account, user_account
+    ):
+        me = api.get(
+            "/auth/user",
+            headers=_auth(user_account["token"]),
+        )
+        assert me.status_code == 200, me.text
+
+        delete = api.delete(
+            f"/admin/users/{user_account['id']}",
+            headers=_auth(admin_account["token"]),
+        )
+        assert delete.status_code == 200, delete.text
+
+        revoked = api.get(
+            "/auth/user",
+            headers=_auth(user_account["token"]),
+        )
+        assert revoked.status_code == 401, revoked.text
+
+    def test_deleted_admin_session_revoked(self, api, admin_account):
+        second = api.post(
+            "/admin/register",
+            json={
+                "email": f"ppl-doomed2-{uuid.uuid4().hex[:8]}@example.com",
+                "password": "Password123",
+            },
+        )
+        assert second.status_code == 200, second.text
+        doomed_token = second.json()["token"]
+        doomed_id = second.json()["id"]
+
+        assert (
+            api.get("/admin/me", headers=_auth(doomed_token)).status_code
+            == 200
+        )
+
+        delete = api.delete(
+            f"/admin/{doomed_id}", headers=_auth(admin_account["token"])
+        )
+        assert delete.status_code == 200, delete.text
+
+        revoked = api.get("/admin/me", headers=_auth(doomed_token))
+        assert revoked.status_code == 401, revoked.text
+
+    def test_password_change_revokes_old_session(self, api, admin_account):
+        old_token = admin_account["token"]
+
+        response = api.patch(
+            f"/admin/{admin_account['id']}",
+            json={"password": "ChangedPass321"},
+            headers=_auth(old_token),
+        )
+        assert response.status_code == 200, response.text
+
+        revoked = api.get("/admin/me", headers=_auth(old_token))
+        assert revoked.status_code == 401, revoked.text
+
+        login = api.post(
+            "/admin/login",
+            json={
+                "email": response.json()["email"],
+                "password": "ChangedPass321",
+            },
+        )
+        assert login.status_code == 200, login.text
+
+    def test_update_admin_duplicate_email_returns_409(
+        self, api, admin_account
+    ):
+        second = api.post(
+            "/admin/register",
+            json={
+                "email": f"ppl-clash-{uuid.uuid4().hex[:8]}@example.com",
+                "password": "Password123",
+            },
+        )
+        assert second.status_code == 200, second.text
+        try:
+            clash = api.patch(
+                f"/admin/{second.json()['id']}",
+                json={"email": admin_account["email"]},
+                headers=_auth(admin_account["token"]),
+            )
+            assert clash.status_code == 409, clash.text
+        finally:
+            api.delete(
+                f"/admin/{second.json()['id']}",
+                headers=_auth(admin_account["token"]),
+            )
+
     def test_delete_other_admin(self, api, admin_account):
         second = api.post(
             "/admin/register",

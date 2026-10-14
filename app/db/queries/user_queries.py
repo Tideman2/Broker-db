@@ -6,9 +6,22 @@ INSERT INTO users (
 """
 
 GET_USER_BY_ID = """
-SELECT *
+SELECT
+    users.id AS user_id,
+    users.email AS email,
+    users.full_name AS full_name,
+    users.phone AS phone,
+    users.dob AS dob,
+    users.username AS username,
+    users.role AS role,
+    user_addresses.country AS country,
+    user_addresses.city AS city,
+    user_addresses.state AS state,
+    user_addresses.zip AS zip,
+    user_addresses.address1 AS address1,
+    user_addresses.address2 AS address2
 FROM users
-JOIN user_addresses ON users.id = user_addresses.user_id
+LEFT JOIN user_addresses ON users.id = user_addresses.user_id
 WHERE users.id = %s;
 """
 

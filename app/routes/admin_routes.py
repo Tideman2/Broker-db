@@ -125,14 +125,14 @@ def fetch_user_as_admin(
 
 
 @admin_router.delete("/users/{user_id}")
-def delete_user_as_admin_endpoint(
+async def delete_user_as_admin_endpoint(
     user_id: int,
     user=Depends(require_admin)
 ):
     """
     Hard delete a user for admin.
     """
-    return user_services.delete_user_as_admin(user_id=user_id)
+    return await user_services.delete_user_as_admin(user_id=user_id)
 
 
 # ======================================================
@@ -164,7 +164,7 @@ def fetch_admin_by_id(
 
 
 @admin_router.patch("/{admin_id}", response_model=AdminPublic)
-def update_admin_endpoint(
+async def update_admin_endpoint(
     admin_id: int,
     payload: AdminUpdateRequest,
     user=Depends(require_admin)
@@ -172,17 +172,17 @@ def update_admin_endpoint(
     """
     Update an admin's email and/or password.
     """
-    return user_services.update_admin(admin_id=admin_id, data=payload)
+    return await user_services.update_admin(admin_id=admin_id, data=payload)
 
 
 @admin_router.delete("/{admin_id}")
-def delete_admin_endpoint(
+async def delete_admin_endpoint(
     admin_id: int,
     user=Depends(require_admin)
 ):
     """
     Delete another admin. Self-delete is rejected.
     """
-    return user_services.delete_admin(
+    return await user_services.delete_admin(
         admin_id=admin_id, current_admin_id=user.user_id
     )
