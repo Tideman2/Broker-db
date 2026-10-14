@@ -394,13 +394,15 @@ async def create_admin(data: Admin) -> CreateUserResponse:
         admin_id = cursor.lastrowid
 
         conn.commit()
-        access_token = create_token(admin_id, "ADMIN")
+        access_token = create_token(admin_id, "ADMIN", ACCESS_SECRET_KEY)
 
         await store_access_token_in_redis(
             user_id=str(admin_id),
             access_token=access_token,
-            expiration_seconds=7200  # 2 hours in seconds
+            expiration_seconds=7200,  # 2 hours in seconds
+            user_role="ADMIN"
         )
+
         return {"id": admin_id, "message": "Admin created", "token": access_token}
 
     except Exception as e:
@@ -441,12 +443,13 @@ async def check_if_admin_email_and_password_is_correct(data: LoginUserRequest):
             )
 
         accesse_token = create_token(
-            admin["id"], admin["role"])
+            admin["id"], admin["role"], ACCESS_SECRET_KEY)
 
         await store_access_token_in_redis(
             user_id=str(admin["id"]),
             access_token=accesse_token,
-            expiration_seconds=7200  # 2 hours in seconds
+            expiration_seconds=7200,  # 2 hours in seconds
+            user_role="ADMIN"
         )
         return {"token": accesse_token}
 

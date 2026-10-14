@@ -10,20 +10,20 @@ admin_router = APIRouter(
 
 
 @admin_router.post("/register")
-def register_admin(payload: Admin):
+async def register_admin(payload: Admin):
     """
      function to register Admin.
     """
-    response = user_services.create_admin(payload)
+    response = await user_services.create_admin(payload)
     return response
 
 
 @admin_router.post("/login")
-def login_admin(payload: LoginUserRequest):
+async def login_admin(payload: LoginUserRequest):
     """
      Route handler to admin loigin,
     """
-    response = user_services.check_if_admin_email_and_password_is_correct(
+    response = await user_services.check_if_admin_email_and_password_is_correct(
         payload
     )
 
