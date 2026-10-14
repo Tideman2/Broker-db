@@ -255,7 +255,8 @@ async def generate_new_token(token: str) -> str:
     await store_access_token_in_redis(
         user_id=str(user_id),
         access_token=access_token,
-        expiration_seconds=7200  # 2 hours in seconds
+        expiration_seconds=7200,  # 2 hours in seconds
+        user_role=role
     )
     return access_token
 

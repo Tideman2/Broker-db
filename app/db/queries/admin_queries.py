@@ -26,6 +26,6 @@ UPDATE_ADMIN = """
 UPDATE admins
 SET
     email = %s,
-    password = %s,
+    password_hash = %s
 WHERE id = %s
 """
