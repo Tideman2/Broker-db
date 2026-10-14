@@ -69,6 +69,7 @@ WHERE symbol = %s;
 GET_WITHDRAWAL_RECORD = """
 SELECT
     w.id,
+    w.user_id,
     w.amount,
     w.status,
     w.confirmed_at,
@@ -120,6 +121,42 @@ JOIN assets a
 JOIN withdrawal_destination wd
     ON w.withdrawal_destination_id = wd.id
 WHERE w.user_id = %s;
+"""
+
+GET_ALL_WITHDRAWALS = """
+SELECT
+    w.id,
+    w.user_id,
+    w.amount,
+    w.status,
+    w.created_at,
+    a.symbol AS asset_symbol,
+    a.name AS asset_name,
+    wd.type AS destination_type
+FROM withdrawals w
+JOIN assets a
+    ON w.asset_id = a.id
+JOIN withdrawal_destination wd
+    ON w.withdrawal_destination_id = wd.id
+WHERE (%s IS NULL OR w.status = %s)
+ORDER BY w.created_at DESC
+LIMIT %s OFFSET %s;
+"""
+
+CONFIRM_WITHDRAWAL = """
+UPDATE withdrawals
+SET
+    status = 'confirmed',
+    confirmed_at = %s
+WHERE id = %s
+AND status = 'pending';
+"""
+
+REJECT_WITHDRAWAL = """
+UPDATE withdrawals
+SET status = 'rejected'
+WHERE id = %s
+AND status = 'pending';
 """
 
 GET_WITHDRAW_DESTINATION_BY_LABEL = """

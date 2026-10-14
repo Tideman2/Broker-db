@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 
 from app.utils.jwt import get_current_user, require_admin
 
@@ -11,7 +11,11 @@ from app.services.wallet_services import (
     get_a_withdraw_record,
     get_user_total_available_balance,
     get_payment_methods,
-    get__deposit
+    get__deposit,
+    get_all_deposits,
+    get_all_withdrawals,
+    confirm_withdrawal,
+    reject_withdrawal
 )
 
 from app.Models.wallet_models import (
@@ -20,6 +24,10 @@ from app.Models.wallet_models import (
     WithdrawFundsRequest,
     WithdrawFundsResponse,
     UserWithdrawalRecordsResponse,
+    AdminDepositResponse,
+    AdminWithdrawalRecordsResponse,
+    DepositStatus,
+    WithdrawStatus,
     PaymentMethodResponse
 )
 
@@ -172,4 +180,81 @@ def get_user_balance_endpoint(
     """
     return get_user_total_available_balance(
         user_id=user.user_id
+    )
+
+
+# ======================================================
+# ADMIN
+# ======================================================
+
+
+@wallet_router.get(
+    "/admin/deposits",
+    response_model=list[AdminDepositResponse]
+)
+def get_all_deposits_endpoint(
+    status: DepositStatus | None = None,
+    limit: int = Query(10, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    user=Depends(require_admin)
+):
+    """
+    Get paginated deposits for admin, optionally filtered by status.
+    """
+    return get_all_deposits(
+        limit=limit,
+        offset=offset,
+        status=status.value if status else None
+    )
+
+
+@wallet_router.get(
+    "/admin/withdrawals",
+    response_model=list[AdminWithdrawalRecordsResponse]
+)
+def get_all_withdrawals_endpoint(
+    status: WithdrawStatus | None = None,
+    limit: int = Query(10, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    user=Depends(require_admin)
+):
+    """
+    Get paginated withdrawals for admin, optionally filtered by status.
+    """
+    return get_all_withdrawals(
+        limit=limit,
+        offset=offset,
+        status=status.value if status else None
+    )
+
+
+@wallet_router.post(
+    "/withdrawals/{withdrawal_id}/confirm",
+    response_model=WithdrawFundsResponse
+)
+def confirm_withdrawal_endpoint(
+    withdrawal_id: int,
+    user=Depends(require_admin)
+):
+    """
+    Confirm a withdrawal: flips status and consumes locked funds.
+    """
+    return confirm_withdrawal(
+        withdrawal_id=withdrawal_id
+    )
+
+
+@wallet_router.post(
+    "/withdrawals/{withdrawal_id}/reject",
+    response_model=WithdrawFundsResponse
+)
+def reject_withdrawal_endpoint(
+    withdrawal_id: int,
+    user=Depends(require_admin)
+):
+    """
+    Reject a withdrawal: flips status and unlocks funds to available.
+    """
+    return reject_withdrawal(
+        withdrawal_id=withdrawal_id
     )

@@ -6,6 +6,7 @@ from app.db.queries.deposits_queries import (
     CONFIRM_DEPOSIT,
     REJECT_DEPOSIT,
     GET_DEPOSITS,
+    GET_ALL_DEPOSITS,
     GET_RECENT_DEPOSITS
 )
 
@@ -40,6 +41,17 @@ def _get_recent_deposits(cursor, user_id, limit: int, offset: int) -> list[dict]
     Get's paginated deposits for user
     """
     cursor.execute(GET_RECENT_DEPOSITS, (user_id, limit, offset))
+
+    deposits = cursor.fetchall()
+
+    return deposits
+
+
+def _get_all_deposits(cursor, limit: int, offset: int, status: str | None = None) -> list[dict]:
+    """
+    Get's paginated deposits for admin, optionally filtered by status
+    """
+    cursor.execute(GET_ALL_DEPOSITS, (status, status, limit, offset))
 
     deposits = cursor.fetchall()
 

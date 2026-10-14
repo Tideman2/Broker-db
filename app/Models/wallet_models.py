@@ -66,6 +66,10 @@ class DepositResponse(BaseModel):
     status: str
     date: datetime
 
+
+class AdminDepositResponse(DepositResponse):
+    user_id: int
+
 # ======================================================
 # WITHDRAW MODELS
 # ======================================================
@@ -141,6 +145,10 @@ class UserWithdrawalRecordsResponse(BaseModel):
     asset_symbol: str
     asset_name: str
     destination_type: str
+
+
+class AdminWithdrawalRecordsResponse(UserWithdrawalRecordsResponse):
+    user_id: int
 
 
 class WithdrawFundsResponse(BaseModel):

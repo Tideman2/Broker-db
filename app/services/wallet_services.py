@@ -17,15 +17,23 @@ from app.utils.wallet import (
     _get_wallet,
     _validate_available_balance,
     _lock_funds,
+    _unlock_funds,
+    _consume_lock_funds,
     _get_withdraw_destination,
     _get_asset_by_symbol,
     _create_withdraw_record,
     _get_withdrawal_record,
+    _confirm_withdrawal_record,
+    _reject_withdrawal_record,
     _build_withdraw_response,
     _build_withdrawals_response,
     _build_paymment_methods_response,
     _get_recent_deposits,
-    _build_deposits_response
+    _get_all_deposits,
+    _get_all_withdrawals,
+    _build_deposits_response,
+    _build_admin_deposits_response,
+    _build_admin_withdrawals_response
 )
 
 from app.Models.wallet_models import (
@@ -410,6 +418,159 @@ def get_payment_methods():
         raise
 
     except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        ) from e
+
+    finally:
+        cursor.close()
+        conn.close()
+
+
+# ======================================================
+# ADMIN
+# ======================================================
+
+
+def get_all_deposits(
+    limit: int,
+    offset: int,
+    status: str | None = None
+):
+    """
+    Admin service to get paginated deposits, optionally filtered by status.
+    """
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    try:
+        pagination = PaginationRequest(_get_all_deposits)
+
+        pagination_data = pagination.runCallback(
+            cursor=cursor,
+            limit=limit,
+            offset=offset,
+            status=status
+        )
+
+        return _build_admin_deposits_response(pagination_data)
+
+    except Exception as e:
+
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        ) from e
+
+    finally:
+        cursor.close()
+        conn.close()
+
+
+def get_all_withdrawals(
+    limit: int,
+    offset: int,
+    status: str | None = None
+):
+    """
+    Admin service to get paginated withdrawals, optionally filtered by status.
+    """
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    try:
+        pagination = PaginationRequest(_get_all_withdrawals)
+
+        pagination_data = pagination.runCallback(
+            cursor=cursor,
+            limit=limit,
+            offset=offset,
+            status=status
+        )
+
+        return _build_admin_withdrawals_response(pagination_data)
+
+    except Exception as e:
+
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        ) from e
+
+    finally:
+        cursor.close()
+        conn.close()
+
+
+def confirm_withdrawal(
+    withdrawal_id: int
+):
+    """
+    Confirms withdrawal: flips status to confirmed and consumes locked funds.
+    """
+
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    try:
+        confirmed_at = datetime.now(UTC)
+        _confirm_withdrawal_record(cursor, confirmed_at, withdrawal_id)
+
+        withdrawal = _get_withdrawal_record(cursor, withdrawal_id)
+
+        _consume_lock_funds(
+            cursor, withdrawal["user_id"], withdrawal["amount"])
+
+        conn.commit()
+
+        return _build_withdraw_response(withdrawal)
+
+    except HTTPException:
+        conn.rollback()
+        raise
+
+    except Exception as e:
+        conn.rollback()
+
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        ) from e
+
+    finally:
+        cursor.close()
+        conn.close()
+
+
+def reject_withdrawal(
+    withdrawal_id: int
+):
+    """
+    Rejects withdrawal: flips status to rejected and unlocks funds to available.
+    """
+
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    try:
+        _reject_withdrawal_record(cursor, withdrawal_id)
+
+        withdrawal = _get_withdrawal_record(cursor, withdrawal_id)
+
+        _unlock_funds(cursor, withdrawal["user_id"], withdrawal["amount"])
+
+        conn.commit()
+
+        return _build_withdraw_response(withdrawal)
+
+    except HTTPException:
+        conn.rollback()
+        raise
+
+    except Exception as e:
+        conn.rollback()
+
         raise HTTPException(
             status_code=500,
             detail=str(e)

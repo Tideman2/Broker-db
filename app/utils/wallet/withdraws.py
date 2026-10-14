@@ -10,6 +10,9 @@ from app.db.queries.withdraw_queries import (
     GET_ASSET_BY_SYMBOL,
     GET_WITHDRAWAL_RECORD,
     GET_WITHDRAWAL_RECORDS,
+    GET_ALL_WITHDRAWALS,
+    CONFIRM_WITHDRAWAL,
+    REJECT_WITHDRAWAL,
     GET_WITHDRAWAL_DESTINATIONS
 )
 
@@ -172,3 +175,41 @@ def _get_user_withdrawal_records(cursor, user_id: int):
         return []
 
     return assets
+
+
+def _get_all_withdrawals(cursor, limit: int, offset: int, status: str | None = None):
+    """
+    Fetch paginated withdraw records for admin, optionally filtered by status.
+    """
+
+    cursor.execute(GET_ALL_WITHDRAWALS, (status, status, limit, offset))
+
+    return cursor.fetchall()
+
+
+def _confirm_withdrawal_record(cursor, confirmed_at, withdrawal_id: int):
+    """
+    Confirm's withdrawal in db or raise a 400 error.
+    """
+
+    cursor.execute(CONFIRM_WITHDRAWAL, (confirmed_at, withdrawal_id,))
+
+    if cursor.rowcount == 0:
+        raise HTTPException(
+            status_code=400,
+            detail="Withdrawal is not pending or does not exist."
+        )
+
+
+def _reject_withdrawal_record(cursor, withdrawal_id: int):
+    """
+    Reject's withdrawal in db or raise a 400 error.
+    """
+
+    cursor.execute(REJECT_WITHDRAWAL, (withdrawal_id,))
+
+    if cursor.rowcount == 0:
+        raise HTTPException(
+            status_code=400,
+            detail="Withdrawal is not pending or does not exist."
+        )

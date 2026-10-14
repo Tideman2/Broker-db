@@ -12,7 +12,8 @@ def format_redis_key(
         role: UserRole = UserRole.USER
 ) -> str:
     """Format a Redis key for a user's token."""
-    return f"user:{user_id}:{token_type}:{role}"
+    suffix = role.value if isinstance(role, UserRole) else str(role)
+    return f"user:{user_id}:{token_type}:{suffix}"
 
 
 async def store_access_token_in_redis(
@@ -103,4 +104,36 @@ async def delete_reset_password_token_redis(
 ) -> int:
     """Delete a user's stored reset password token. Returns the number of keys deleted."""
     redis_key = format_redis_key(user_id, "reset_password_token", user_role)
+    return await redis_client.delete(redis_key)
+
+
+# REFRESH TOKEN MANAGEMENT
+
+
+async def store_refresh_token_in_redis(
+    user_id: str,
+    token: str,
+    expiration_seconds: int = 3600 * 24 * 7,
+    user_role: UserRole = UserRole.USER
+) -> None:
+    """Store a refresh token with an expiration."""
+    redis_key = format_redis_key(user_id, "refresh_token", user_role)
+    await redis_client.set(redis_key, token, ex=expiration_seconds)
+
+
+async def get_refresh_token_from_redis(
+        user_id: str,
+        user_role: UserRole = UserRole.USER
+) -> str | None:
+    """Retrieve a user's stored refresh token."""
+    redis_key = format_redis_key(user_id, "refresh_token", user_role)
+    return await redis_client.get(redis_key)
+
+
+async def delete_refresh_token_from_redis(
+        user_id: str,
+        user_role: UserRole = UserRole.USER
+) -> int:
+    """Delete a user's stored refresh token. Returns the number of keys deleted."""
+    redis_key = format_redis_key(user_id, "refresh_token", user_role)
     return await redis_client.delete(redis_key)
