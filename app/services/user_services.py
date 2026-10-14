@@ -6,7 +6,8 @@ from app.Models.auth_models import (
     Admin,
     CreateUserResponse,
     LoginUserRequest,
-    UserResponse
+    UserResponse,
+    UserRole
 )
 
 from app.email import email_service
@@ -401,7 +402,7 @@ async def create_admin(data: Admin) -> CreateUserResponse:
             user_id=str(admin_id),
             access_token=access_token,
             expiration_seconds=7200,  # 2 hours in seconds
-            user_role="ADMIN"
+            user_role=UserRole.ADMIN
         )
 
         return {"id": admin_id, "message": "Admin created", "token": access_token}
@@ -450,7 +451,7 @@ async def check_if_admin_email_and_password_is_correct(data: LoginUserRequest):
             user_id=str(admin["id"]),
             access_token=accesse_token,
             expiration_seconds=7200,  # 2 hours in seconds
-            user_role="ADMIN"
+            user_role=UserRole.ADMIN
         )
         return {"token": accesse_token}
 

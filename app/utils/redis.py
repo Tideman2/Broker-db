@@ -12,7 +12,8 @@ def format_redis_key(
         role: UserRole = UserRole.USER
 ) -> str:
     """Format a Redis key for a user's token."""
-    return f"user:{user_id}:{token_type}:{role}"
+    suffix = role.value if isinstance(role, UserRole) else str(role)
+    return f"user:{user_id}:{token_type}:{suffix}"
 
 
 async def store_access_token_in_redis(
