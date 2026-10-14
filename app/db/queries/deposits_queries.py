@@ -93,3 +93,26 @@ ORDER BY d.created_at DESC
 
 LIMIT %s OFFSET %s;
 """
+
+GET_ALL_DEPOSITS = """
+SELECT d.id,
+        d.user_id,
+        pm.name as payment_method,
+        a.name as asset,
+        d.amount as amount,
+        d.status,
+        d.created_at as date
+FROM deposits as d
+
+JOIN assets a
+    ON d.asset_id = a.id
+
+JOIN payment_methods as pm
+    ON d.payment_method_id = pm.id
+
+WHERE (%s IS NULL OR d.status = %s)
+
+ORDER BY d.created_at DESC
+
+LIMIT %s OFFSET %s;
+"""
