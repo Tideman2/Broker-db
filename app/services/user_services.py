@@ -4,6 +4,9 @@ from app.db.connection import get_connection
 from app.Models.auth_models import (
     User,
     Admin,
+    AdminPublic,
+    AdminUserListItem,
+    AdminUpdateRequest,
     CreateUserResponse,
     LoginUserRequest,
     UserResponse,
@@ -21,13 +24,18 @@ from app.db.queries.user_queries import (
     INSERT_USER,
     INSERT_ADDRESS,
     GET_USER_BY_ID,
-    GET_USER_BY_EMAIL
+    GET_USER_BY_EMAIL,
+    GET_ALL_USERS,
+    DELETE_USER
 )
 
 from app.db.queries.admin_queries import (
     GET_ADMIN_BY_EMAIL,
     GET_ADMIN_BY_ID,
+    GET_ALL_ADMINS,
     INSERT_ADMIN,
+    UPDATE_ADMIN,
+    DELETE_ADMIN,
     UPDATE_ADMIN_PASSWORD
 )
 
@@ -163,13 +171,19 @@ def get_user(user_id) -> User:
         cursor.execute(GET_USER_BY_ID, (user_id,))
         user = cursor.fetchone()
 
+        if not user:
+            raise HTTPException(
+                status_code=404,
+                detail="User not found"
+            )
+
         return UserResponse(
             id=user["user_id"],
             country=user["country"],
             email=user["email"],
             full_name=user["full_name"],
             phone=user["phone"],
-            dob=user["dob"].strftime("%Y-%m-%d"),
+            dob=user["dob"].strftime("%Y-%m-%d") if user["dob"] else None,
             username=user["username"],
             address1=user["address1"],
             address2=user["address2"],
@@ -179,6 +193,8 @@ def get_user(user_id) -> User:
             role=user["role"]
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
         conn.rollback()
         raise HTTPException(
@@ -278,6 +294,198 @@ def delete_user(user_id: int):
 
         return {"message": "User deleted"}
 
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        ) from e
+    finally:
+        cursor.close()
+        conn.close()
+
+
+# ============================
+# Admin user management
+# ============================
+
+
+def list_users(limit: int = 10, offset: int = 0):
+    """
+    Admin function to list paginated users.
+    """
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute(GET_ALL_USERS, (limit, offset))
+        users = cursor.fetchall()
+
+        return [
+            AdminUserListItem(
+                id=user["id"],
+                email=user["email"],
+                full_name=user["full_name"],
+                username=user["username"],
+                role=user["role"]
+            )
+            for user in users
+        ]
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        ) from e
+    finally:
+        cursor.close()
+        conn.close()
+
+
+def delete_user_as_admin(user_id: int):
+    """
+    Admin function to hard delete a user from db.
+    Related wallet, address, destination, subscription and
+    transaction rows cascade via foreign keys.
+    """
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute(DELETE_USER, (user_id,))
+
+        if cursor.rowcount == 0:
+            raise HTTPException(
+                status_code=404,
+                detail="User not found"
+            )
+
+        conn.commit()
+
+        return {"message": "User deleted", "id": user_id}
+
+    except HTTPException:
+        conn.rollback()
+        raise
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        ) from e
+    finally:
+        cursor.close()
+        conn.close()
+
+
+def list_admins(limit: int = 10, offset: int = 0):
+    """
+    Admin function to list paginated admins.
+    """
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute(GET_ALL_ADMINS, (limit, offset))
+        admins = cursor.fetchall()
+
+        return [
+            AdminPublic(
+                id=admin["id"],
+                email=admin["email"],
+                role=admin["role"]
+            )
+            for admin in admins
+        ]
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        ) from e
+    finally:
+        cursor.close()
+        conn.close()
+
+
+def update_admin(admin_id: int, data: AdminUpdateRequest):
+    """
+    Admin function to update an admin's email and/or password.
+    """
+    if data.email is None and data.password is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Nothing to update."
+        )
+
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute(GET_ADMIN_BY_ID, (admin_id,))
+        admin = cursor.fetchone()
+
+        if not admin:
+            raise HTTPException(
+                status_code=404,
+                detail="Admin not found"
+            )
+
+        new_email = data.email if data.email is not None else admin["email"]
+        new_hash = (
+            hash_password(password=data.password)
+            if data.password is not None
+            else admin["password_hash"]
+        )
+
+        cursor.execute(UPDATE_ADMIN, (new_email, new_hash, admin_id))
+        conn.commit()
+
+        return AdminPublic(id=admin_id, email=new_email, role=admin["role"])
+
+    except HTTPException:
+        conn.rollback()
+        raise
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        ) from e
+    finally:
+        cursor.close()
+        conn.close()
+
+
+def delete_admin(admin_id: int, current_admin_id: int):
+    """
+    Admin function to delete another admin. Self-delete is rejected.
+    """
+    if admin_id == current_admin_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Admins cannot delete themselves."
+        )
+
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute(DELETE_ADMIN, (admin_id,))
+
+        if cursor.rowcount == 0:
+            raise HTTPException(
+                status_code=404,
+                detail="Admin not found"
+            )
+
+        conn.commit()
+
+        return {"message": "Admin deleted", "id": admin_id}
+
+    except HTTPException:
+        conn.rollback()
+        raise
     except Exception as e:
         conn.rollback()
         raise HTTPException(

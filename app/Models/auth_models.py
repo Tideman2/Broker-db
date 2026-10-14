@@ -16,6 +16,29 @@ class Admin(BaseModel):
     )
 
 
+class AdminPublic(BaseModel):
+    id: int
+    email: str
+    role: UserRole
+
+
+class AdminUserListItem(BaseModel):
+    id: int
+    email: EmailStr
+    full_name: str
+    username: str | None = None
+    role: UserRole
+
+
+class AdminUpdateRequest(BaseModel):
+    email: EmailStr | None = None
+    password: str | None = Field(
+        default=None,
+        min_length=8,
+        max_length=100
+    )
+
+
 class CurrentUser(BaseModel):
     user_id: int
     role: UserRole

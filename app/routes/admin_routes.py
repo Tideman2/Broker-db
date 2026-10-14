@@ -3,10 +3,14 @@ from fastapi import APIRouter, Depends
 from app.services import user_services
 from app.Models.auth_models import (
     Admin,
+    AdminPublic,
+    AdminUpdateRequest,
+    AdminUserListItem,
     LoginUserRequest,
     RefreshTokenRequest,
     ForgotPasswordRequest,
     ResetPasswordRequest,
+    UserResponse,
     VerifyOTPRequest
 )
 from app.utils.jwt import require_admin
@@ -90,3 +94,95 @@ async def admin_reset_password(payload: ResetPasswordRequest):
     """
     response = await user_services.reset_admin_password(payload.email, payload.new_password, payload.reset_token)
     return response
+
+
+# ======================================================
+# USER MANAGEMENT
+# ======================================================
+
+
+@admin_router.get("/users", response_model=list[AdminUserListItem])
+def list_users_endpoint(
+    limit: int = 10,
+    offset: int = 0,
+    user=Depends(require_admin)
+):
+    """
+    List paginated users for admin.
+    """
+    return user_services.list_users(limit=limit, offset=offset)
+
+
+@admin_router.get("/users/{user_id}", response_model=UserResponse)
+def fetch_user_as_admin(
+    user_id: int,
+    user=Depends(require_admin)
+):
+    """
+    Get a single user by id for admin.
+    """
+    return user_services.get_user(user_id=user_id)
+
+
+@admin_router.delete("/users/{user_id}")
+def delete_user_as_admin_endpoint(
+    user_id: int,
+    user=Depends(require_admin)
+):
+    """
+    Hard delete a user for admin.
+    """
+    return user_services.delete_user_as_admin(user_id=user_id)
+
+
+# ======================================================
+# ADMIN MANAGEMENT
+# ======================================================
+
+
+@admin_router.get("/list", response_model=list[AdminPublic])
+def list_admins_endpoint(
+    limit: int = 10,
+    offset: int = 0,
+    user=Depends(require_admin)
+):
+    """
+    List paginated admins.
+    """
+    return user_services.list_admins(limit=limit, offset=offset)
+
+
+@admin_router.get("/{admin_id}", response_model=AdminPublic)
+def fetch_admin_by_id(
+    admin_id: int,
+    user=Depends(require_admin)
+):
+    """
+    Get a single admin by id.
+    """
+    return user_services.get_admin(admin_id=admin_id)
+
+
+@admin_router.patch("/{admin_id}", response_model=AdminPublic)
+def update_admin_endpoint(
+    admin_id: int,
+    payload: AdminUpdateRequest,
+    user=Depends(require_admin)
+):
+    """
+    Update an admin's email and/or password.
+    """
+    return user_services.update_admin(admin_id=admin_id, data=payload)
+
+
+@admin_router.delete("/{admin_id}")
+def delete_admin_endpoint(
+    admin_id: int,
+    user=Depends(require_admin)
+):
+    """
+    Delete another admin. Self-delete is rejected.
+    """
+    return user_services.delete_admin(
+        admin_id=admin_id, current_admin_id=user.user_id
+    )

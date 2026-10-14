@@ -29,3 +29,10 @@ DELETE
 FROM users
 WHERE id = %s
 """
+
+GET_ALL_USERS = """
+SELECT id, email, full_name, username, role, created_at
+FROM users
+ORDER BY created_at DESC
+LIMIT %s OFFSET %s
+"""
