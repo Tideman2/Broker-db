@@ -272,7 +272,7 @@ async def check_if_email_and_password_is_correct(data: LoginUserRequest):
         conn.close()
 
 
-async def generate_new_token(token: str) -> str:
+async def generate_new_token(token: str, allow_admin: bool = False) -> str:
     """
     function that checks if the token is valid
     and generates a new token from same payload
@@ -280,6 +280,12 @@ async def generate_new_token(token: str) -> str:
     user = decode_token(token, type="refresh")
     user_id = user["user_id"]
     role = user["role"]
+
+    if role == UserRole.ADMIN and not allow_admin:
+        raise HTTPException(
+            status_code=403,
+            detail="Use the admin refresh endpoint."
+        )
 
     conn = None
     cursor = None
@@ -714,6 +720,12 @@ async def create_admin(data: Admin) -> CreateUserResponse:
 
         return {"id": admin_id, "message": "Admin created", "token": access_token, "refresh_token": refresh_token}
 
+    except IntegrityError as e:
+        conn.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail="Email already in use."
+        ) from e
     except Exception as e:
         conn.rollback()
         raise HTTPException(
@@ -849,7 +861,7 @@ async def generate_new_admin_token(token: str) -> str:
             detail="Invalid refresh token"
         )
 
-    return await generate_new_token(token)
+    return await generate_new_token(token, allow_admin=True)
 
 
 async def logout_admin(admin_id: int):

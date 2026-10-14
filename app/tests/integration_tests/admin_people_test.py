@@ -189,6 +189,33 @@ class TestAdminPeople:
         assert response.status_code == 200, response.text
         assert response.json()["address1"] is None
 
+    def test_admin_refresh_rejected_on_user_endpoint(
+        self, api, admin_account
+    ):
+        session = api.post(
+            "/admin/login",
+            json={"email": admin_account["email"], "password": "Password123"},
+        ).json()
+
+        replay = api.post(
+            "/auth/refresh", json={"token": session["refresh_token"]}
+        )
+        assert replay.status_code == 403, replay.text
+
+    def test_duplicate_admin_register_returns_409(self, api, admin_account):
+        clash = api.post(
+            "/admin/register",
+            json={"email": admin_account["email"], "password": "Password123"},
+        )
+        assert clash.status_code == 409, clash.text
+
+    def test_admin_register_rejects_invalid_email(self, api):
+        response = api.post(
+            "/admin/register",
+            json={"email": "not-an-email", "password": "Password123"},
+        )
+        assert response.status_code == 422, response.text
+
     def test_non_admin_forbidden_on_people_routes(
         self, api, admin_account, user_account
     ):
