@@ -29,3 +29,15 @@ SET
     password_hash = %s
 WHERE id = %s
 """
+
+GET_ADMIN_BY_ID = """
+SELECT *
+FROM admins
+WHERE id = %s
+"""
+
+UPDATE_ADMIN_PASSWORD = """
+UPDATE admins
+SET password_hash = %s
+WHERE id = %s
+"""

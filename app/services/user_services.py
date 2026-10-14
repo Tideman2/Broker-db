@@ -26,7 +26,9 @@ from app.db.queries.user_queries import (
 
 from app.db.queries.admin_queries import (
     GET_ADMIN_BY_EMAIL,
-    INSERT_ADMIN
+    GET_ADMIN_BY_ID,
+    INSERT_ADMIN,
+    UPDATE_ADMIN_PASSWORD
 )
 
 from app.utils.wallet import (
@@ -51,6 +53,7 @@ from app.utils.jwt import (
 )
 from app.utils.redis import (
     store_access_token_in_redis,
+    delete_access_token_from_redis,
     store_otp_secret_redis,
     get_otp_secret_redis,
     delete_otp_secret_redis,
@@ -405,7 +408,11 @@ async def create_admin(data: Admin) -> CreateUserResponse:
             user_role=UserRole.ADMIN
         )
 
-        return {"id": admin_id, "message": "Admin created", "token": access_token}
+        # Refresh token valid for 7 days
+        refresh_token = create_token(
+            admin_id, "ADMIN", ACCESS_REFRESH_SECRET_KEY, expiration_hours=24*7)
+
+        return {"id": admin_id, "message": "Admin created", "token": access_token, "refresh_token": refresh_token}
 
     except Exception as e:
         conn.rollback()
@@ -453,7 +460,12 @@ async def check_if_admin_email_and_password_is_correct(data: LoginUserRequest):
             expiration_seconds=7200,  # 2 hours in seconds
             user_role=UserRole.ADMIN
         )
-        return {"token": accesse_token}
+
+        # Refresh token valid for 7 days
+        refresh_token = create_token(
+            admin["id"], admin["role"], ACCESS_REFRESH_SECRET_KEY, expiration_hours=24*7)
+
+        return {"token": accesse_token, "refresh_token": refresh_token}
 
     except HTTPException:
         raise
@@ -464,6 +476,224 @@ async def check_if_admin_email_and_password_is_correct(data: LoginUserRequest):
             status_code=500,
             detail=str(e)
         ) from e
+    finally:
+        cursor.close()
+        conn.close()
+
+
+def get_admin(admin_id: int):
+    """
+    function to get admin info from db
+    """
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute(GET_ADMIN_BY_ID, (admin_id,))
+        admin = cursor.fetchone()
+
+        if not admin:
+            raise HTTPException(
+                status_code=404,
+                detail="Admin not found"
+            )
+
+        return {
+            "id": admin["id"],
+            "email": admin["email"],
+            "role": admin["role"],
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        ) from e
+    finally:
+        cursor.close()
+        conn.close()
+
+
+async def logout_admin(admin_id: int):
+    """
+    function to log out an admin by deleting the session token from redis
+    """
+    await delete_access_token_from_redis(
+        user_id=str(admin_id),
+        user_role=UserRole.ADMIN
+    )
+    return {"message": "Admin logged out"}
+
+
+async def send_admin_password_reset_otp(email: str):
+    """
+    Function to send a password reset OTP to the admin's email.
+    """
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    try:
+        cursor.execute(GET_ADMIN_BY_EMAIL, (email,))
+        admin = cursor.fetchone()
+
+        if not admin:
+            raise HTTPException(
+                status_code=404,
+                detail="Admin not found"
+            )
+
+        otp_secret = generate_otp_secret()
+        otp = generate_otp(otp_secret)
+        await store_otp_secret_redis(
+            str(admin["id"]), otp_secret, user_role=UserRole.ADMIN)
+
+        template = template_env.get_template("otp_mail.html")
+        html_content = template.render(
+            email=email,
+            otp=otp
+        )
+
+        email_service.send_email(
+            to=email,
+            subject="Password Reset OTP",
+            body="Your password reset OTP.",
+            html_body=html_content
+        )
+
+        return {"message": "OTP sent to email", "timeout": OTP_INTERVAL}
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        ) from e
+
+    finally:
+        cursor.close()
+        conn.close()
+
+
+async def verify_admin_password_reset_otp(email: str, otp: str):
+    """
+    Function to verify the password reset OTP for an admin.
+    """
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.execute(GET_ADMIN_BY_EMAIL, (email,))
+        admin = cursor.fetchone()
+
+        if not admin:
+            raise HTTPException(
+                status_code=404,
+                detail="Admin not found"
+            )
+
+        otp_secret = await get_otp_secret_redis(
+            str(admin["id"]), user_role=UserRole.ADMIN)
+
+        if not otp_secret:
+            raise HTTPException(
+                status_code=400,
+                detail="OTP has expired or is invalid"
+            )
+
+        if not verify_otp(secret=otp_secret, otp=otp):
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid OTP"
+            )
+
+        await delete_otp_secret_redis(
+            str(admin["id"]), user_role=UserRole.ADMIN)
+
+        password_reset_token = create_token(
+            admin["id"],
+            admin["role"],
+            PASSWORD_RESET_SECRET_KEY,
+            expiration_hours=1
+        )
+
+        await store_reset_password_token_redis(
+            user_id=str(admin["id"]),
+            token=password_reset_token,
+            expiration_seconds=3600,  # 1 hour in seconds
+            user_role=UserRole.ADMIN
+        )
+
+        return {"message": "OTP verified successfully", "password_reset_token": password_reset_token}
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        ) from e
+
+
+async def reset_admin_password(email: str, new_password: str, password_reset_token: str):
+    """
+    Function to reset the admin's password.
+    """
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.execute(GET_ADMIN_BY_EMAIL, (email,))
+        admin = cursor.fetchone()
+
+        if not admin:
+            raise HTTPException(
+                status_code=404,
+                detail="Admin not found"
+            )
+
+        payload = decode_token(password_reset_token, type="password_reset")
+
+        if payload["user_id"] != admin["id"]:
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid password reset token for this admin"
+            )
+
+        stored_token = await get_reset_password_token_redis(
+            str(admin["id"]), user_role=UserRole.ADMIN)
+
+        if stored_token != password_reset_token:
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid or expired password reset token"
+            )
+
+        hashed_password = hash_password(new_password)
+
+        cursor.execute(
+            UPDATE_ADMIN_PASSWORD,
+            (hashed_password, admin["id"])
+        )
+        conn.commit()
+
+        await delete_reset_password_token_redis(
+            str(admin["id"]), user_role=UserRole.ADMIN)
+
+        return {"message": "Password reset successfully"}
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        ) from e
+
     finally:
         cursor.close()
         conn.close()

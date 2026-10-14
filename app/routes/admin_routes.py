@@ -1,7 +1,15 @@
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from app.services import user_services
-from app.Models.auth_models import Admin, LoginUserRequest
+from app.Models.auth_models import (
+    Admin,
+    LoginUserRequest,
+    RefreshTokenRequest,
+    ForgotPasswordRequest,
+    ResetPasswordRequest,
+    VerifyOTPRequest
+)
+from app.utils.jwt import require_admin
 
 admin_router = APIRouter(
     prefix="/admin",
@@ -27,4 +35,58 @@ async def login_admin(payload: LoginUserRequest):
         payload
     )
 
+    return response
+
+
+@admin_router.get("/me")
+def fetch_admin(user=Depends(require_admin)):
+    """
+     Route handler to get current admin,
+     enforces jwt auth and admin role
+    """
+    return user_services.get_admin(admin_id=user.user_id)
+
+
+@admin_router.post("/refresh")
+async def refresh_admin_token(data: RefreshTokenRequest):
+    """
+    Route handler to sign a new admin token from a refresh token
+    """
+    new_token = await user_services.generate_new_token(data.token)
+    return {"token": new_token}
+
+
+@admin_router.post("/logout")
+async def logout_admin(user=Depends(require_admin)):
+    """
+     Route handler to log out admin,
+     deletes the session token from redis
+    """
+    return await user_services.logout_admin(admin_id=user.user_id)
+
+
+@admin_router.post("/forgot-password")
+async def admin_forgot_password(payload: ForgotPasswordRequest):
+    """
+     Route handler to send otp to admin email for password reset
+    """
+    response = await user_services.send_admin_password_reset_otp(payload.email)
+    return response
+
+
+@admin_router.post("/verify-otp")
+async def admin_verify_otp(payload: VerifyOTPRequest):
+    """
+     Route handler to verify otp sent to admin email for password reset
+    """
+    response = await user_services.verify_admin_password_reset_otp(payload.email, payload.otp)
+    return response
+
+
+@admin_router.post("/reset-password")
+async def admin_reset_password(payload: ResetPasswordRequest):
+    """
+     Route handler to reset admin password
+    """
+    response = await user_services.reset_admin_password(payload.email, payload.new_password, payload.reset_token)
     return response
