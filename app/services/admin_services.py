@@ -521,7 +521,7 @@ async def generate_new_admin_token(token: str) -> str:
             detail="Invalid refresh token"
         )
 
-    return await generate_new_token(token, allow_admin=True)
+    return await generate_new_token(token)
 
 
 async def logout_admin(admin_id: int):
