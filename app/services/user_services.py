@@ -3,10 +3,10 @@ from fastapi import HTTPException
 from app.db.connection import get_connection
 from app.Models.auth_models import (
     User,
-    Admin,
     CreateUserResponse,
     LoginUserRequest,
-    UserResponse
+    UserResponse,
+    UserRole
 )
 
 from app.email import email_service
@@ -20,12 +20,12 @@ from app.db.queries.user_queries import (
     INSERT_USER,
     INSERT_ADDRESS,
     GET_USER_BY_ID,
-    GET_USER_BY_EMAIL
+    GET_USER_BY_EMAIL,
+    USER_EXISTS
 )
 
 from app.db.queries.admin_queries import (
-    GET_ADMIN_BY_EMAIL,
-    INSERT_ADMIN
+    GET_ADMIN_BY_ID
 )
 
 from app.utils.wallet import (
@@ -152,6 +152,8 @@ def get_user(user_id) -> User:
     """
     function to get user info from db
     """
+    conn = None
+    cursor = None
     try:
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -159,13 +161,19 @@ def get_user(user_id) -> User:
         cursor.execute(GET_USER_BY_ID, (user_id,))
         user = cursor.fetchone()
 
+        if not user:
+            raise HTTPException(
+                status_code=404,
+                detail="User not found"
+            )
+
         return UserResponse(
             id=user["user_id"],
             country=user["country"],
             email=user["email"],
             full_name=user["full_name"],
             phone=user["phone"],
-            dob=user["dob"].strftime("%Y-%m-%d"),
+            dob=user["dob"].strftime("%Y-%m-%d") if user["dob"] else None,
             username=user["username"],
             address1=user["address1"],
             address2=user["address2"],
@@ -175,15 +183,20 @@ def get_user(user_id) -> User:
             role=user["role"]
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
-        conn.rollback()
+        if conn is not None:
+            conn.rollback()
         raise HTTPException(
             status_code=500,
             detail=str(e)
         ) from e
     finally:
-        cursor.close()
-        conn.close()
+        if cursor is not None:
+            cursor.close()
+        if conn is not None:
+            conn.close()
 
 
 async def check_if_email_and_password_is_correct(data: LoginUserRequest):
@@ -241,7 +254,7 @@ async def check_if_email_and_password_is_correct(data: LoginUserRequest):
         conn.close()
 
 
-async def generate_new_token(token: str) -> str:
+async def generate_new_token(token: str, allow_admin: bool = False) -> str:
     """
     function that checks if the token is valid
     and generates a new token from same payload
@@ -249,13 +262,43 @@ async def generate_new_token(token: str) -> str:
     user = decode_token(token, type="refresh")
     user_id = user["user_id"]
     role = user["role"]
+
+    if role == UserRole.ADMIN and not allow_admin:
+        raise HTTPException(
+            status_code=403,
+            detail="Use the admin refresh endpoint."
+        )
+
+    conn = None
+    cursor = None
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        if role == UserRole.ADMIN:
+            cursor.execute(GET_ADMIN_BY_ID, (user_id,))
+        else:
+            cursor.execute(USER_EXISTS, (user_id,))
+
+        if not cursor.fetchone():
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid refresh token"
+            )
+    finally:
+        if cursor is not None:
+            cursor.close()
+        if conn is not None:
+            conn.close()
+
     access_token = create_token(
         user_id, role, ACCESS_SECRET_KEY)
 
     await store_access_token_in_redis(
         user_id=str(user_id),
         access_token=access_token,
-        expiration_seconds=7200  # 2 hours in seconds
+        expiration_seconds=7200,  # 2 hours in seconds
+        user_role=role
     )
     return access_token
 
@@ -362,102 +405,6 @@ def add_crypto_withdraw_destination(user_id: int, destination: AddCryptoDestinat
 
     except Exception as e:
         conn.rollback()
-        raise HTTPException(
-            status_code=500,
-            detail=str(e)
-        ) from e
-    finally:
-        cursor.close()
-        conn.close()
-
-
-# ============================
-# Admin
-# ============================
-
-
-async def create_admin(data: Admin) -> CreateUserResponse:
-    """
-    function that on boards an admon to the system
-    """
-    conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
-
-    try:
-        hashed_password = hash_password(password=data.password)
-        # Insert Admin
-        cursor.execute(INSERT_ADMIN, (
-            data.email,
-            hashed_password,
-        ))
-
-        admin_id = cursor.lastrowid
-
-        conn.commit()
-        access_token = create_token(admin_id, "ADMIN", ACCESS_SECRET_KEY)
-
-        await store_access_token_in_redis(
-            user_id=str(admin_id),
-            access_token=access_token,
-            expiration_seconds=7200,  # 2 hours in seconds
-            user_role="ADMIN"
-        )
-
-        return {"id": admin_id, "message": "Admin created", "token": access_token}
-
-    except Exception as e:
-        conn.rollback()
-        raise HTTPException(
-            status_code=500,
-            detail=str(e)
-        ) from e
-
-    finally:
-        cursor.close()
-        conn.close()
-
-
-async def check_if_admin_email_and_password_is_correct(data: LoginUserRequest):
-    """
-    function to check if email is in db,
-    and check password agaisnt hashed in db.
-    """
-    try:
-        conn = get_connection()
-        cursor = conn.cursor(dictionary=True)
-
-        cursor.execute(GET_ADMIN_BY_EMAIL, (data.email,))
-        admin = cursor.fetchone()
-
-        if not admin:
-            raise HTTPException(
-                status_code=401,
-                detail="Invalid credentials"
-            )
-
-        admin_exists = verify_password(data.password, admin["password_hash"])
-        if not admin_exists:
-            raise HTTPException(
-                status_code=401,
-                detail="Password is incorrect"
-            )
-
-        accesse_token = create_token(
-            admin["id"], admin["role"], ACCESS_SECRET_KEY)
-
-        await store_access_token_in_redis(
-            user_id=str(admin["id"]),
-            access_token=accesse_token,
-            expiration_seconds=7200,  # 2 hours in seconds
-            user_role="ADMIN"
-        )
-        return {"token": accesse_token}
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        conn.rollback()
-        print(e)
         raise HTTPException(
             status_code=500,
             detail=str(e)
@@ -622,6 +569,10 @@ async def verify_password_reset_otp(email: str, otp: str):
             status_code=500,
             detail=str(e)
         ) from e
+
+    finally:
+        cursor.close()
+        conn.close()
 
 
 async def reset_password(email: str, new_password: str, password_reset_token: str):

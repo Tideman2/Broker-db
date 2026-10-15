@@ -72,11 +72,12 @@ async def get_current_user(
     payload = decode_token(token)
 
     user_id = payload.get("user_id")
+    role = payload.get("role")
 
     if not user_id:
         raise HTTPException(status_code=401, detail="Invalid token")
 
-    stored_token = await get_access_token_from_redis(str(user_id))
+    stored_token = await get_access_token_from_redis(str(user_id), role)
 
     if stored_token != token:
         raise HTTPException(

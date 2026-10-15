@@ -9,8 +9,31 @@ class UserRole(str, Enum):
 
 
 class Admin(BaseModel):
-    email: str
+    email: EmailStr
     password: str = Field(
+        min_length=8,
+        max_length=100
+    )
+
+
+class AdminPublic(BaseModel):
+    id: int
+    email: str
+    role: UserRole
+
+
+class AdminUserListItem(BaseModel):
+    id: int
+    email: EmailStr
+    full_name: str
+    username: str | None = None
+    role: UserRole
+
+
+class AdminUpdateRequest(BaseModel):
+    email: EmailStr | None = None
+    password: str | None = Field(
+        default=None,
         min_length=8,
         max_length=100
     )
@@ -67,19 +90,21 @@ class UserResponse(BaseModel):
     """
     Safe user information returned by the API.
     Never includes sensitive information such as passwords.
+    Address fields are optional: a user row may exist
+    without a joined address row.
     """
     id: int
-    country: str
+    country: str | None = None
     email: EmailStr
     full_name: str
     phone: str
     dob: Optional[str] = None
     username: Optional[str] = None
-    address1: str
+    address1: str | None = None
     address2: Optional[str] = None
-    city: str
-    state: str
-    zip: str
+    city: str | None = None
+    state: str | None = None
+    zip: str | None = None
     role: UserRole
 
 

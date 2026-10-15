@@ -6,7 +6,7 @@ from fastapi import HTTPException
 from app.routes import plan_routes
 from fastapi.testclient import TestClient
 from app.main import app
-from app.utils.jwt import create_token
+from app.utils.jwt import create_token, ACCESS_SECRET_KEY
 # from app.db.connection import get_connection
 # from app.services.plan_services import (
 #     delete_plan
@@ -19,8 +19,8 @@ from app.Models.plans_models import (
 EXPIRED_USER_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxLCJyb2xlIjoiQURNSU4iLCJleHAiOjE3ODU3NjE1OTh9.5WvoQEZIbrw-74zs6yOyfNUH_29xrv08QcVRMyzePEk"
 EXPIRED_ADMIN_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxLCJyb2xlIjoiQURNSU4iLCJleHAiOjE3ODU3Nzk1NTR9.fz4-RkP-TOVKDfaY9ls-qCT1QARjTPPMqx0WCTJkuC8"
 client = TestClient(app)
-ADMIN_TOKEN = create_token(user_id=1, role="ADMIN")
-USER_TOKEN = create_token(user_id=2, role="USER")
+ADMIN_TOKEN = create_token(user_id=1, role="ADMIN", SECRET_KEY=ACCESS_SECRET_KEY)
+USER_TOKEN = create_token(user_id=2, role="USER", SECRET_KEY=ACCESS_SECRET_KEY)
 
 plan_request = CreatePlanRequest(
     plan=Plan(

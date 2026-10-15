@@ -19,12 +19,12 @@ auth_router = APIRouter(
 
 
 @auth_router.post("/register")
-def register_user(payload: User):
+async def register_user(payload: User):
     """
      function to register user, this function,
      this function will also validate the incoming payload
     """
-    response = user_services.create_user(payload)
+    response = await user_services.create_user(payload)
     return response
 
 

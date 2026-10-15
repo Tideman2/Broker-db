@@ -26,6 +26,25 @@ UPDATE_ADMIN = """
 UPDATE admins
 SET
     email = %s,
-    password = %s,
+    password_hash = %s
+WHERE id = %s
+"""
+
+GET_ADMIN_BY_ID = """
+SELECT *
+FROM admins
+WHERE id = %s
+"""
+
+GET_ALL_ADMINS = """
+SELECT id, email, role, created_at
+FROM admins
+ORDER BY created_at DESC
+LIMIT %s OFFSET %s
+"""
+
+UPDATE_ADMIN_PASSWORD = """
+UPDATE admins
+SET password_hash = %s
 WHERE id = %s
 """

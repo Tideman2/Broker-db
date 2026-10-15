@@ -43,3 +43,5 @@ secrets.json
 
 # Misc
 *.swp
+# Worktrees
+.worktrees/

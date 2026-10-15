@@ -8,8 +8,10 @@ from app.Models.wallet_models import (
     DestinationResponse,
     DestinationType,
     UserWithdrawalRecordsResponse,
+    AdminWithdrawalRecordsResponse,
     PaymentMethodResponse,
-    DepositResponse
+    DepositResponse,
+    AdminDepositResponse
 )
 
 from app.Models.asset_models import (
@@ -197,4 +199,39 @@ def _build_deposits_response(
             date=deposit["date"]
         )
         for deposit in deposits
+    ]
+
+
+def _build_admin_deposits_response(
+    deposits: list[dict]
+) -> list[AdminDepositResponse]:
+    return [
+        AdminDepositResponse(
+            id=deposit["id"],
+            user_id=deposit["user_id"],
+            payment_method=deposit["payment_method"],
+            asset=deposit["asset"],
+            amount=deposit["amount"],
+            status=deposit["status"],
+            date=deposit["date"]
+        )
+        for deposit in deposits
+    ]
+
+
+def _build_admin_withdrawals_response(
+    withdrawals: list[dict]
+) -> list[AdminWithdrawalRecordsResponse]:
+    return [
+        AdminWithdrawalRecordsResponse(
+            id=withdrawal["id"],
+            user_id=withdrawal["user_id"],
+            amount=withdrawal["amount"],
+            status=withdrawal["status"],
+            created_at=withdrawal["created_at"],
+            asset_symbol=withdrawal["asset_symbol"],
+            asset_name=withdrawal["asset_name"],
+            destination_type=withdrawal["destination_type"],
+        )
+        for withdrawal in withdrawals
     ]
