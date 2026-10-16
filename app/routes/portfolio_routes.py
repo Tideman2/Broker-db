@@ -23,7 +23,7 @@ from app.services.portfolio_services import (
     get_trades_overview
 )
 
-from app.utils.jwt import get_current_user
+from app.utils.jwt import get_current_user, require_admin
 
 
 portfolio_router = APIRouter(
@@ -62,6 +62,47 @@ def sell(
     """
     return sell_instrument(
         user_id=user.user_id,
+        data=request
+    )
+
+
+# ======================================================
+# ADMIN
+# ======================================================
+
+
+@portfolio_router.post(
+    "/admin/buy/{user_id}",
+    response_model=TransactionResponse
+)
+def admin_buy(
+    user_id: int,
+    request: BuyInstrumentRequest,
+    user=Depends(require_admin)
+):
+    """
+    Buy an instrument on behalf of a user.
+    """
+    return buy_instrument(
+        user_id=user_id,
+        data=request
+    )
+
+
+@portfolio_router.post(
+    "/admin/sell/{user_id}",
+    response_model=TransactionResponse
+)
+def admin_sell(
+    user_id: int,
+    request: SellInstrumentRequest,
+    user=Depends(require_admin)
+):
+    """
+    Sell an instrument on behalf of a user.
+    """
+    return sell_instrument(
+        user_id=user_id,
         data=request
     )
 
