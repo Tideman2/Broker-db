@@ -50,6 +50,10 @@ from app.utils.jwt import (
 )
 from app.utils.redis import (
     store_access_token_in_redis,
+    delete_access_token_from_redis,
+    store_refresh_token_in_redis,
+    get_refresh_token_from_redis,
+    delete_refresh_token_from_redis,
     store_otp_secret_redis,
     get_otp_secret_redis,
     delete_otp_secret_redis,
@@ -114,6 +118,13 @@ async def create_user(data: User) -> CreateUserResponse:
         # Refresh token valid for 7 days
         refresh_token = create_token(
             user_id, "USER", ACCESS_REFRESH_SECRET_KEY, expiration_hours=24*7)
+
+        await store_refresh_token_in_redis(
+            user_id=str(user_id),
+            token=refresh_token,
+            expiration_seconds=3600*24*7,
+            user_role=UserRole.USER
+        )
 
         # Handle sending welcome email
         template = template_env.get_template("welcome_aboard.html")
@@ -238,6 +249,13 @@ async def check_if_email_and_password_is_correct(data: LoginUserRequest):
         refresh_token = create_token(
             user["id"], user["role"], ACCESS_REFRESH_SECRET_KEY, expiration_hours=24*7)
 
+        await store_refresh_token_in_redis(
+            user_id=str(user["id"]),
+            token=refresh_token,
+            expiration_seconds=3600*24*7,
+            user_role=UserRole.USER
+        )
+
         return {"user_id": user["id"], "token": access_token, "refresh_token": refresh_token}
 
     except HTTPException:
@@ -268,6 +286,16 @@ async def generate_new_token(token: str, allow_admin: bool = False) -> str:
             status_code=403,
             detail="Use the admin refresh endpoint."
         )
+
+    if role != UserRole.ADMIN:
+        stored_refresh = await get_refresh_token_from_redis(
+            str(user_id), user_role=UserRole.USER)
+
+        if stored_refresh != token:
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid refresh token"
+            )
 
     conn = None
     cursor = None
@@ -301,6 +329,22 @@ async def generate_new_token(token: str, allow_admin: bool = False) -> str:
         user_role=role
     )
     return access_token
+
+
+async def logout_user(user_id: int):
+    """
+    function to log out a user by deleting the session
+    and refresh tokens from redis
+    """
+    await delete_access_token_from_redis(
+        user_id=str(user_id),
+        user_role=UserRole.USER
+    )
+    await delete_refresh_token_from_redis(
+        user_id=str(user_id),
+        user_role=UserRole.USER
+    )
+    return {"message": "User logged out"}
 
 
 def delete_user(user_id: int):

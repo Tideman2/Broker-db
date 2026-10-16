@@ -58,6 +58,15 @@ async def refresh_token(data: RefreshTokenRequest):
     return {"token": new_token}
 
 
+@auth_router.post("/logout")
+async def logout_user(user=Depends(get_current_user)):
+    """
+     Route handler to log out user,
+     deletes the session and refresh tokens from redis
+    """
+    return await user_services.logout_user(user_id=user.user_id)
+
+
 @auth_router.delete("/user")
 def delete_user(user=Depends(get_current_user)):
     """
