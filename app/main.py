@@ -15,6 +15,7 @@ from app.routes.user_routes import user_router
 from app.routes.subscription_routes import subscription_router
 from app.routes.plan_routes import plan_router
 from app.routes.asset_routes import asset_router
+from app.routes.instrument_routes import instrument_router
 
 
 origins = os.getenv(
@@ -55,6 +56,7 @@ app.include_router(subscription_router)
 app.include_router(admin_router)
 app.include_router(plan_router)
 app.include_router(asset_router)
+app.include_router(instrument_router)
 
 
 @app.get("/")
