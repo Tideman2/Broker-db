@@ -6,6 +6,12 @@ WHERE id = %s
 AND is_active = TRUE;
 """
 
+CHECK_INSTRUMENT_ANY = """
+SELECT id, current_price
+FROM instruments
+WHERE id = %s;
+"""
+
 GET_USER_INSTRUMENT_TRANSACTIONS = """
 SELECT
     type,
@@ -55,6 +61,7 @@ SELECT
 FROM instruments i
 JOIN categories c
     ON i.category_id = c.id
+WHERE (%s IS NULL OR i.is_active = %s)
 ORDER BY i.created_at DESC
 LIMIT %s OFFSET %s;
 """

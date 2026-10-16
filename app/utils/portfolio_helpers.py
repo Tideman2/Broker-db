@@ -2,7 +2,7 @@ from decimal import Decimal
 from fastapi import HTTPException
 
 from app.db.queries.user_queries import GET_USER_BY_ID
-from app.db.queries.instrument_queries import CHECK_INSTRUMENT
+from app.db.queries.instrument_queries import CHECK_INSTRUMENT, CHECK_INSTRUMENT_ANY
 from app.db.queries.transaction_queries import GET_TRADES
 from app.Models.portfolio_models import InstrumentProfitLossResult
 
@@ -55,12 +55,15 @@ def _get_user(cursor, user_id: int):
     return user
 
 
-def _get_instrument(cursor, instrument_id: int):
+def _get_instrument(cursor, instrument_id: int, active_only: bool = True):
     """
     Fetches an instrument or raises 404.
+    Buy paths require an active instrument; sell paths
+    accept inactive ones so holders can always exit.
     """
 
-    cursor.execute(CHECK_INSTRUMENT, (instrument_id,))
+    query = CHECK_INSTRUMENT if active_only else CHECK_INSTRUMENT_ANY
+    cursor.execute(query, (instrument_id,))
     instrument = cursor.fetchone()
 
     if not instrument:

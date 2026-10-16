@@ -50,11 +50,16 @@ def _check_symbol_unique(cursor, symbol: str, exclude_id: int | None = None):
         )
 
 
-def _get_instruments(cursor, limit: int, offset: int) -> list[dict]:
+def _get_instruments(
+    cursor,
+    limit: int,
+    offset: int,
+    is_active: bool | None = None
+) -> list[dict]:
     """
-    Get's paginated instruments for admin.
+    Get's paginated instruments for admin, optionally filtered by status.
     """
-    cursor.execute(GET_INSTRUMENTS, (limit, offset))
+    cursor.execute(GET_INSTRUMENTS, (is_active, is_active, limit, offset))
 
     return cursor.fetchall()
 

@@ -27,14 +27,16 @@ instrument_router = APIRouter(
     response_model=list[InstrumentResponse]
 )
 def get_instruments_endpoint(
+    is_active: bool | None = None,
     limit: int = Query(10, ge=1, le=100),
     offset: int = Query(0, ge=0),
     user=Depends(require_admin)
 ):
     """
-    List paginated instruments for admin, including inactive ones.
+    List paginated instruments for admin, optionally filtered
+    by is_active. Inactive instruments are included by default.
     """
-    return get_instruments(limit=limit, offset=offset)
+    return get_instruments(limit=limit, offset=offset, is_active=is_active)
 
 
 @instrument_router.post(

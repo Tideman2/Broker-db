@@ -237,6 +237,120 @@ class TestAdminInstruments:
         ids = [h["instrument_id"] for h in holdings.json()]
         assert inst_id in ids
 
+    def test_sell_still_allowed_after_deactivation(
+        self, api, admin_account, user_account
+    ):
+        created = _create(api, admin_account["token"], price="5.00")
+        assert created.status_code == 200, created.text
+        inst_id = created.json()["id"]
+
+        dep = api.post(
+            "/wallet/deposit",
+            json={
+                "deposit": {
+                    "amount": "100.00",
+                    "asset_id": 1,
+                    "payment_method": 1,
+                }
+            },
+            headers=_auth(user_account["token"]),
+        )
+        assert dep.status_code == 200, dep.text
+        conf = api.post(
+            f"/wallet/deposits/{dep.json()['id']}/confirm",
+            headers=_auth(admin_account["token"]),
+        )
+        assert conf.status_code == 200, conf.text
+
+        buy = api.post(
+            "/portfolio/buy",
+            json={"instrument_id": inst_id, "quantity": "2"},
+            headers=_auth(user_account["token"]),
+        )
+        assert buy.status_code == 200, buy.text
+
+        off = api.put(
+            f"/instruments/{inst_id}",
+            json={"is_active": False},
+            headers=_auth(admin_account["token"]),
+        )
+        assert off.status_code == 200, off.text
+
+        sell = api.post(
+            "/portfolio/sell",
+            json={"instrument_id": inst_id, "quantity": "1"},
+            headers=_auth(user_account["token"]),
+        )
+        assert sell.status_code == 200, sell.text
+
+    def test_reactivation_restores_buy(
+        self, api, admin_account, user_account
+    ):
+        created = _create(api, admin_account["token"], price="5.00")
+        assert created.status_code == 200, created.text
+        inst_id = created.json()["id"]
+
+        api.put(
+            f"/instruments/{inst_id}",
+            json={"is_active": False},
+            headers=_auth(admin_account["token"]),
+        )
+        on = api.put(
+            f"/instruments/{inst_id}",
+            json={"is_active": True},
+            headers=_auth(admin_account["token"]),
+        )
+        assert on.status_code == 200, on.text
+        assert on.json()["is_active"] is True
+
+    def test_update_to_duplicate_symbol_returns_409(
+        self, api, admin_account
+    ):
+        first = _create(api, admin_account["token"])
+        assert first.status_code == 200, first.text
+        second = _create(api, admin_account["token"])
+        assert second.status_code == 200, second.text
+
+        clash = api.put(
+            f"/instruments/{second.json()['id']}",
+            json={"symbol": first.json()["symbol"]},
+            headers=_auth(admin_account["token"]),
+        )
+        assert clash.status_code == 409, clash.text
+
+    def test_invalid_price_rejected(self, api, admin_account):
+        bad_create = _create(api, admin_account["token"], price="0")
+        assert bad_create.status_code == 400, bad_create.text
+
+        created = _create(api, admin_account["token"])
+        assert created.status_code == 200, created.text
+        bad_update = api.put(
+            f"/instruments/{created.json()['id']}",
+            json={"current_price": "-3"},
+            headers=_auth(admin_account["token"]),
+        )
+        assert bad_update.status_code == 400, bad_update.text
+
+    def test_list_filters_by_is_active(self, api, admin_account):
+        active = _create(api, admin_account["token"])
+        assert active.status_code == 200, active.text
+        doomed = _create(api, admin_account["token"])
+        assert doomed.status_code == 200, doomed.text
+        api.delete(
+            f"/instruments/{doomed.json()['id']}",
+            headers=_auth(admin_account["token"]),
+        )
+
+        inactive = api.get(
+            "/instruments?is_active=false&limit=100&offset=0",
+            headers=_auth(admin_account["token"]),
+        )
+        assert inactive.status_code == 200, inactive.text
+        ids = [i["id"] for i in inactive.json()]
+        assert doomed.json()["id"] in ids
+        assert active.json()["id"] not in ids
+        assert all(i["is_active"] is False for i in inactive.json())
+
     def test_non_admin_forbidden(self, api, admin_account, user_account):
         headers = _auth(user_account["token"])
         assert api.get("/instruments", headers=headers).status_code == 403

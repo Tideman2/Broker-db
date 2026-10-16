@@ -40,9 +40,14 @@ def _build_instrument_response(instrument: dict) -> InstrumentResponse:
     )
 
 
-def get_instruments(limit: int = 10, offset: int = 0):
+def get_instruments(
+    limit: int = 10,
+    offset: int = 0,
+    is_active: bool | None = None
+):
     """
-    Admin function to list paginated instruments, including inactive ones.
+    Admin function to list paginated instruments, including inactive
+    ones unless filtered by is_active.
     """
     conn = None
     cursor = None
@@ -55,11 +60,14 @@ def get_instruments(limit: int = 10, offset: int = 0):
         instruments = pagination.runCallback(
             cursor=cursor,
             limit=limit,
-            offset=offset
+            offset=offset,
+            is_active=is_active
         )
 
         return [_build_instrument_response(i) for i in instruments]
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=500,
@@ -100,10 +108,13 @@ def add_instrument(data: AddInstrumentRequest):
             ) from e
 
         instrument_id = cursor.lastrowid
+
+        response = _build_instrument_response(
+            _get_instrument_by_id(cursor, instrument_id))
+
         conn.commit()
 
-        return _build_instrument_response(
-            _get_instrument_by_id(cursor, instrument_id))
+        return response
 
     except HTTPException:
         if conn is not None:
@@ -164,10 +175,12 @@ def update_instrument(instrument_id: int, data: UpdateInstrumentRequest):
                 detail="Instrument symbol already in use."
             ) from e
 
+        response = _build_instrument_response(
+            _get_instrument_by_id(cursor, instrument_id))
+
         conn.commit()
 
-        return _build_instrument_response(
-            _get_instrument_by_id(cursor, instrument_id))
+        return response
 
     except HTTPException:
         if conn is not None:
