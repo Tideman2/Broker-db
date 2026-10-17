@@ -1,0 +1,3 @@
+ALTER TABLE instruments
+ADD COLUMN is_active BOOLEAN NOT NULL DEFAULT TRUE,
+ADD UNIQUE KEY symbol (symbol);

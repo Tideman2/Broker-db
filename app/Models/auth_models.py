@@ -1,5 +1,5 @@
 from enum import Enum
-from pydantic import BaseModel, Field, EmailStr
+from pydantic import BaseModel, Field, EmailStr, field_validator
 from typing import Optional, TypedDict
 
 
@@ -108,6 +108,48 @@ class UserResponse(BaseModel):
     role: UserRole
 
 
+class UpdateUserRequest(BaseModel):
+    """
+    Partial update of a user's own profile. Only fields the user is
+    allowed to change from the settings page are accepted.
+    """
+    full_name: str = Field(
+        min_length=1,
+        max_length=120
+    )
+
+    @field_validator("full_name")
+    @classmethod
+    def _require_non_blank_name(cls, value: str) -> str:
+        stripped = value.strip()
+
+        if not stripped:
+            raise ValueError("Full name cannot be blank.")
+
+        return stripped
+
+
+class CurrencyDisplay(str, Enum):
+    USD = "usd"
+    EUR = "eur"
+    GBP = "gbp"
+
+
+class UserPreferences(BaseModel):
+    """
+    Stored user preferences. Theme is intentionally excluded: it stays
+    a client only concern.
+    """
+    currency_display: CurrencyDisplay
+
+
+class UpdatePreferencesRequest(BaseModel):
+    """
+    Partial update of a user's preferences. Any subset may be sent.
+    """
+    currency_display: Optional[CurrencyDisplay] = None
+
+
 class CreateUserResponse(TypedDict):
     """
      Create user service response type
@@ -116,7 +158,6 @@ class CreateUserResponse(TypedDict):
     message: str
     token: str
     refresh_token: str
-
 
 class LoginUserRequest(BaseModel):
     """
@@ -139,6 +180,10 @@ class ChangePasswordRequest(BaseModel):
     """
     Change password request type
     """
+    current_password: str = Field(
+        min_length=1,
+        max_length=100
+    )
     new_password: str = Field(
         min_length=8,
         max_length=100

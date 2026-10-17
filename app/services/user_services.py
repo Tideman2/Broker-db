@@ -4,7 +4,12 @@ from app.db.connection import get_connection
 from app.Models.auth_models import (
     User,
     CreateUserResponse,
+    CurrencyDisplay,
     LoginUserRequest,
+    ChangePasswordRequest,
+    UpdateUserRequest,
+    UpdatePreferencesRequest,
+    UserPreferences,
     UserResponse,
     UserRole
 )
@@ -21,7 +26,15 @@ from app.db.queries.user_queries import (
     INSERT_ADDRESS,
     GET_USER_BY_ID,
     GET_USER_BY_EMAIL,
+    GET_USER_PASSWORD_HASH,
+    UPDATE_USER_FULL_NAME,
+    UPDATE_USER_PASSWORD,
     USER_EXISTS
+)
+
+from app.db.queries.preferences_queries import (
+    GET_USER_PREFERENCES,
+    UPSERT_USER_PREFERENCES
 )
 
 from app.db.queries.admin_queries import (
@@ -208,6 +221,185 @@ def get_user(user_id) -> User:
             cursor.close()
         if conn is not None:
             conn.close()
+
+
+def update_user_profile(user_id: int, data: UpdateUserRequest) -> UserResponse:
+    """
+    function to update the authenticated user's own profile.
+
+    Only the full name is editable from settings; email and phone are
+    intentionally out of scope. Returns the refreshed user record.
+    """
+    conn = None
+    cursor = None
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute(UPDATE_USER_FULL_NAME, (data.full_name, user_id))
+        conn.commit()
+
+    except HTTPException:
+        if conn is not None:
+            conn.rollback()
+        raise
+    except Exception as e:
+        if conn is not None:
+            conn.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        ) from e
+    finally:
+        if cursor is not None:
+            cursor.close()
+        if conn is not None:
+            conn.close()
+
+    return get_user(user_id)
+
+
+async def change_password(user_id: int, data: ChangePasswordRequest):
+    """
+    function to change the authenticated user's password.
+
+    The current password is verified first; a mismatch is a 400 with a
+    user facing message. On success every session is revoked (access and
+    refresh tokens), matching the admin password change flow, so the
+    client must log in again.
+    """
+    conn = None
+    cursor = None
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute(GET_USER_PASSWORD_HASH, (user_id,))
+        user = cursor.fetchone()
+
+        if not user:
+            raise HTTPException(
+                status_code=404,
+                detail="User not found"
+            )
+
+        if not verify_password(
+            data.current_password, user["password_hash"]
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail="Current password is incorrect."
+            )
+
+        cursor.execute(
+            UPDATE_USER_PASSWORD,
+            (hash_password(data.new_password), user_id)
+        )
+        conn.commit()
+
+    except HTTPException:
+        if conn is not None:
+            conn.rollback()
+        raise
+    except Exception as e:
+        if conn is not None:
+            conn.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        ) from e
+    finally:
+        if cursor is not None:
+            cursor.close()
+        if conn is not None:
+            conn.close()
+
+    await delete_access_token_from_redis(
+        str(user_id), user_role=UserRole.USER
+    )
+    await delete_refresh_token_from_redis(
+        str(user_id), user_role=UserRole.USER
+    )
+
+    return {"message": "Password updated."}
+
+
+def get_preferences(user_id: int) -> UserPreferences:
+    """
+    function to read a user's preferences.
+
+    Users who have never saved preferences are returned the defaults
+    rather than a null, so a preferences row is never created on read.
+    """
+    conn = None
+    cursor = None
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute(GET_USER_PREFERENCES, (user_id,))
+        row = cursor.fetchone()
+
+        if not row:
+            return UserPreferences(currency_display=CurrencyDisplay.USD)
+
+        return UserPreferences(currency_display=row["currency_display"])
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        ) from e
+    finally:
+        if cursor is not None:
+            cursor.close()
+        if conn is not None:
+            conn.close()
+
+
+def update_preferences(
+    user_id: int,
+    data: UpdatePreferencesRequest
+) -> UserPreferences:
+    """
+    function to update a user's preferences.
+
+    Any subset of fields may be provided; fields left unset are left
+    untouched. Returns the full stored preferences object.
+    """
+    conn = None
+    cursor = None
+    try:
+        if data.currency_display is not None:
+            conn = get_connection()
+            cursor = conn.cursor(dictionary=True)
+
+            cursor.execute(
+                UPSERT_USER_PREFERENCES,
+                (user_id, data.currency_display.value)
+            )
+            conn.commit()
+
+    except HTTPException:
+        if conn is not None:
+            conn.rollback()
+        raise
+    except Exception as e:
+        if conn is not None:
+            conn.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        ) from e
+    finally:
+        if cursor is not None:
+            cursor.close()
+        if conn is not None:
+            conn.close()
+
+    return get_preferences(user_id)
 
 
 async def check_if_email_and_password_is_correct(data: LoginUserRequest):

@@ -98,8 +98,10 @@ def sell_instrument(
         # Check user exists
         _get_user(cursor, user_id)
 
-        # Check instrument exists
-        instrument = _get_instrument(cursor, data.instrument_id)
+        # Check instrument exists. Inactive instruments can
+        # still be sold so holders can always exit a position.
+        instrument = _get_instrument(
+            cursor, data.instrument_id, active_only=False)
 
         # Validate quantity
         _validate_quantity(data.quantity)
