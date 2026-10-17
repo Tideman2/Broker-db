@@ -5,6 +5,7 @@ from app.Models.auth_models import (
     User,
     CreateUserResponse,
     LoginUserRequest,
+    ChangePasswordRequest,
     UpdateUserRequest,
     UserResponse,
     UserRole
@@ -22,7 +23,9 @@ from app.db.queries.user_queries import (
     INSERT_ADDRESS,
     GET_USER_BY_ID,
     GET_USER_BY_EMAIL,
+    GET_USER_PASSWORD_HASH,
     UPDATE_USER_FULL_NAME,
+    UPDATE_USER_PASSWORD,
     USER_EXISTS
 )
 
@@ -246,6 +249,71 @@ def update_user_profile(user_id: int, data: UpdateUserRequest) -> UserResponse:
             conn.close()
 
     return get_user(user_id)
+
+
+async def change_password(user_id: int, data: ChangePasswordRequest):
+    """
+    function to change the authenticated user's password.
+
+    The current password is verified first; a mismatch is a 400 with a
+    user facing message. On success every session is revoked (access and
+    refresh tokens), matching the admin password change flow, so the
+    client must log in again.
+    """
+    conn = None
+    cursor = None
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute(GET_USER_PASSWORD_HASH, (user_id,))
+        user = cursor.fetchone()
+
+        if not user:
+            raise HTTPException(
+                status_code=404,
+                detail="User not found"
+            )
+
+        if not verify_password(
+            data.current_password, user["password_hash"]
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail="Current password is incorrect."
+            )
+
+        cursor.execute(
+            UPDATE_USER_PASSWORD,
+            (hash_password(data.new_password), user_id)
+        )
+        conn.commit()
+
+    except HTTPException:
+        if conn is not None:
+            conn.rollback()
+        raise
+    except Exception as e:
+        if conn is not None:
+            conn.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        ) from e
+    finally:
+        if cursor is not None:
+            cursor.close()
+        if conn is not None:
+            conn.close()
+
+    await delete_access_token_from_redis(
+        str(user_id), user_role=UserRole.USER
+    )
+    await delete_refresh_token_from_redis(
+        str(user_id), user_role=UserRole.USER
+    )
+
+    return {"message": "Password updated."}
 
 
 async def check_if_email_and_password_is_correct(data: LoginUserRequest):

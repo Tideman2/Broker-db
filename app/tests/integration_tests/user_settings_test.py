@@ -114,3 +114,117 @@ class TestProfileName:
         response = api.patch("/auth/user", json={"full_name": "No Auth"})
 
         assert response.status_code in (401, 403), response.text
+
+
+class TestChangePassword:
+    def test_change_password_succeeds(self, api, user_account):
+        response = api.post(
+            "/auth/change-password",
+            json={
+                "current_password": user_account["password"],
+                "new_password": "NewPassword456",
+            },
+            headers=_auth(user_account["token"]),
+        )
+
+        assert response.status_code == 200, response.text
+        assert response.json() == {"message": "Password updated."}
+
+    def test_new_password_works_and_old_password_fails(self, api, user_account):
+        api.post(
+            "/auth/change-password",
+            json={
+                "current_password": user_account["password"],
+                "new_password": "NewPassword456",
+            },
+            headers=_auth(user_account["token"]),
+        )
+
+        old_login = api.post(
+            "/auth/login",
+            json={
+                "email": user_account["email"],
+                "password": user_account["password"],
+            },
+        )
+        new_login = api.post(
+            "/auth/login",
+            json={
+                "email": user_account["email"],
+                "password": "NewPassword456",
+            },
+        )
+
+        assert old_login.status_code == 401, old_login.text
+        assert new_login.status_code == 200, new_login.text
+
+    def test_change_password_revokes_current_session(self, api, user_account):
+        api.post(
+            "/auth/change-password",
+            json={
+                "current_password": user_account["password"],
+                "new_password": "NewPassword456",
+            },
+            headers=_auth(user_account["token"]),
+        )
+
+        revoked = api.get(
+            "/auth/user", headers=_auth(user_account["token"])
+        )
+
+        assert revoked.status_code == 401, revoked.text
+
+    def test_change_password_revokes_refresh_token(self, api, user_account):
+        api.post(
+            "/auth/change-password",
+            json={
+                "current_password": user_account["password"],
+                "new_password": "NewPassword456",
+            },
+            headers=_auth(user_account["token"]),
+        )
+
+        refresh = api.post(
+            "/auth/refresh", json={"token": user_account["refresh_token"]}
+        )
+
+        assert refresh.status_code == 401, refresh.text
+
+    def test_wrong_current_password_is_rejected(self, api, user_account):
+        response = api.post(
+            "/auth/change-password",
+            json={
+                "current_password": "WrongPassword123",
+                "new_password": "NewPassword456",
+            },
+            headers=_auth(user_account["token"]),
+        )
+
+        assert response.status_code == 400, response.text
+        assert response.json() == {
+            "detail": "Current password is incorrect."
+        }
+
+    def test_short_new_password_is_rejected(self, api, user_account):
+        response = api.post(
+            "/auth/change-password",
+            json={
+                "current_password": user_account["password"],
+                "new_password": "short",
+            },
+            headers=_auth(user_account["token"]),
+        )
+
+        assert response.status_code == 422, response.text
+        assert isinstance(response.json()["detail"], str), response.json()
+
+    def test_change_password_requires_auth(self, api):
+        response = api.post(
+            "/auth/change-password",
+            json={
+                "current_password": "Password123",
+                "new_password": "NewPassword456",
+            },
+        )
+
+        assert response.status_code in (401, 403), response.text

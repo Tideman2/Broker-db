@@ -5,6 +5,7 @@ from app.Models.auth_models import (
     User,
     LoginUserRequest,
     RefreshTokenRequest,
+    ChangePasswordRequest,
     ForgotPasswordRequest,
     ResetPasswordRequest,
     UpdateUserRequest,
@@ -60,6 +61,21 @@ def update_user(
      Only the full name is editable from the settings page.
     """
     return user_services.update_user_profile(
+        user_id=user.user_id,
+        data=payload
+    )
+
+
+@auth_router.post("/change-password")
+async def change_password(
+    payload: ChangePasswordRequest,
+    user=Depends(get_current_user)
+):
+    """
+     Route handler to change the authenticated user's password.
+     Revokes all of the user's sessions on success.
+    """
+    return await user_services.change_password(
         user_id=user.user_id,
         data=payload
     )

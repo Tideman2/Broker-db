@@ -61,3 +61,15 @@ UPDATE users
 SET full_name = %s
 WHERE id = %s
 """
+
+GET_USER_PASSWORD_HASH = """
+SELECT id, password_hash
+FROM users
+WHERE id = %s
+"""
+
+UPDATE_USER_PASSWORD = """
+UPDATE users
+SET password_hash = %s
+WHERE id = %s
+"""
