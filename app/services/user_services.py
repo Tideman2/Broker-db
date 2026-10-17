@@ -359,6 +359,49 @@ def get_preferences(user_id: int) -> UserPreferences:
             conn.close()
 
 
+def update_preferences(
+    user_id: int,
+    data: UpdatePreferencesRequest
+) -> UserPreferences:
+    """
+    function to update a user's preferences.
+
+    Any subset of fields may be provided; fields left unset are left
+    untouched. Returns the full stored preferences object.
+    """
+    conn = None
+    cursor = None
+    try:
+        if data.currency_display is not None:
+            conn = get_connection()
+            cursor = conn.cursor(dictionary=True)
+
+            cursor.execute(
+                UPSERT_USER_PREFERENCES,
+                (user_id, data.currency_display.value)
+            )
+            conn.commit()
+
+    except HTTPException:
+        if conn is not None:
+            conn.rollback()
+        raise
+    except Exception as e:
+        if conn is not None:
+            conn.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        ) from e
+    finally:
+        if cursor is not None:
+            cursor.close()
+        if conn is not None:
+            conn.close()
+
+    return get_preferences(user_id)
+
+
 async def check_if_email_and_password_is_correct(data: LoginUserRequest):
     """
     function to check if email is in db,

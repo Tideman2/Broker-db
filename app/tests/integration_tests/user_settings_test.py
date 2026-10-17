@@ -243,3 +243,47 @@ class TestPreferencesRead:
         response = api.get("/user/preferences")
 
         assert response.status_code in (401, 403), response.text
+
+
+class TestPreferencesUpdate:
+    def test_patch_preferences_persists(self, api, user_account):
+        response = api.patch(
+            "/user/preferences",
+            json={"currency_display": "eur"},
+            headers=_auth(user_account["token"]),
+        )
+
+        assert response.status_code == 200, response.text
+        assert response.json() == {"currency_display": "eur"}
+
+        fetched = api.get(
+            "/user/preferences", headers=_auth(user_account["token"])
+        )
+        assert fetched.json() == {"currency_display": "eur"}
+
+    def test_patch_empty_body_keeps_current_preferences(self, api, user_account):
+        response = api.patch(
+            "/user/preferences",
+            json={},
+            headers=_auth(user_account["token"]),
+        )
+
+        assert response.status_code == 200, response.text
+        assert response.json() == {"currency_display": "usd"}
+
+    def test_patch_unknown_currency_is_rejected(self, api, user_account):
+        response = api.patch(
+            "/user/preferences",
+            json={"currency_display": "yen"},
+            headers=_auth(user_account["token"]),
+        )
+
+        assert response.status_code == 422, response.text
+        assert isinstance(response.json()["detail"], str), response.json()
+
+    def test_patch_preferences_requires_auth(self, api):
+        response = api.patch(
+            "/user/preferences", json={"currency_display": "eur"}
+        )
+
+        assert response.status_code in (401, 403), response.text
