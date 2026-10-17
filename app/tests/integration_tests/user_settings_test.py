@@ -59,3 +59,58 @@ class TestValidationErrorShape:
         assert response.status_code == 422, response.text
         body = response.json()
         assert isinstance(body["detail"], str), body
+
+
+class TestProfileName:
+    def test_patch_name_updates_profile(self, api, user_account):
+        response = api.patch(
+            "/auth/user",
+            json={"full_name": "Jane Updated"},
+            headers=_auth(user_account["token"]),
+        )
+
+        assert response.status_code == 200, response.text
+        body = response.json()
+        assert body["full_name"] == "Jane Updated"
+        assert body["id"] == user_account["id"]
+        assert body["email"] == user_account["email"]
+        assert body["role"] == "USER"
+
+    def test_patch_name_is_persisted(self, api, user_account):
+        api.patch(
+            "/auth/user",
+            json={"full_name": "Persisted Name"},
+            headers=_auth(user_account["token"]),
+        )
+
+        fetched = api.get("/auth/user", headers=_auth(user_account["token"]))
+
+        assert fetched.status_code == 200, fetched.text
+        assert fetched.json()["full_name"] == "Persisted Name"
+
+    def test_patch_name_trims_whitespace(self, api, user_account):
+        response = api.patch(
+            "/auth/user",
+            json={"full_name": "  Jane Trimmed  "},
+            headers=_auth(user_account["token"]),
+        )
+
+        assert response.status_code == 200, response.text
+        assert response.json()["full_name"] == "Jane Trimmed"
+
+    def test_patch_blank_name_is_rejected(self, api, user_account):
+        response = api.patch(
+            "/auth/user",
+            json={"full_name": "   "},
+            headers=_auth(user_account["token"]),
+        )
+
+        assert response.status_code == 422, response.text
+        assert response.json() == {
+            "detail": "full_name: Full name cannot be blank."
+        }
+
+    def test_patch_name_requires_auth(self, api):
+        response = api.patch("/auth/user", json={"full_name": "No Auth"})
+
+        assert response.status_code in (401, 403), response.text

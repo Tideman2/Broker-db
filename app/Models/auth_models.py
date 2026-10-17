@@ -1,5 +1,5 @@
 from enum import Enum
-from pydantic import BaseModel, Field, EmailStr
+from pydantic import BaseModel, Field, EmailStr, field_validator
 from typing import Optional, TypedDict
 
 
@@ -108,6 +108,27 @@ class UserResponse(BaseModel):
     role: UserRole
 
 
+class UpdateUserRequest(BaseModel):
+    """
+    Partial update of a user's own profile. Only fields the user is
+    allowed to change from the settings page are accepted.
+    """
+    full_name: str = Field(
+        min_length=1,
+        max_length=120
+    )
+
+    @field_validator("full_name")
+    @classmethod
+    def _require_non_blank_name(cls, value: str) -> str:
+        stripped = value.strip()
+
+        if not stripped:
+            raise ValueError("Full name cannot be blank.")
+
+        return stripped
+
+
 class CreateUserResponse(TypedDict):
     """
      Create user service response type
@@ -116,7 +137,6 @@ class CreateUserResponse(TypedDict):
     message: str
     token: str
     refresh_token: str
-
 
 class LoginUserRequest(BaseModel):
     """

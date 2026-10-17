@@ -5,6 +5,7 @@ from app.Models.auth_models import (
     User,
     CreateUserResponse,
     LoginUserRequest,
+    UpdateUserRequest,
     UserResponse,
     UserRole
 )
@@ -21,6 +22,7 @@ from app.db.queries.user_queries import (
     INSERT_ADDRESS,
     GET_USER_BY_ID,
     GET_USER_BY_EMAIL,
+    UPDATE_USER_FULL_NAME,
     USER_EXISTS
 )
 
@@ -208,6 +210,42 @@ def get_user(user_id) -> User:
             cursor.close()
         if conn is not None:
             conn.close()
+
+
+def update_user_profile(user_id: int, data: UpdateUserRequest) -> UserResponse:
+    """
+    function to update the authenticated user's own profile.
+
+    Only the full name is editable from settings; email and phone are
+    intentionally out of scope. Returns the refreshed user record.
+    """
+    conn = None
+    cursor = None
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute(UPDATE_USER_FULL_NAME, (data.full_name, user_id))
+        conn.commit()
+
+    except HTTPException:
+        if conn is not None:
+            conn.rollback()
+        raise
+    except Exception as e:
+        if conn is not None:
+            conn.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        ) from e
+    finally:
+        if cursor is not None:
+            cursor.close()
+        if conn is not None:
+            conn.close()
+
+    return get_user(user_id)
 
 
 async def check_if_email_and_password_is_correct(data: LoginUserRequest):

@@ -1,4 +1,5 @@
 import os
+import re
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
@@ -62,6 +63,7 @@ def _format_validation_error(exc: RequestValidationError) -> str:
         if part not in ("body", "query", "path")
     ]
     message = first.get("msg", "Invalid request.")
+    message = re.sub(r"^Value error, ", "", message)
 
     if location:
         return f"{'.'.join(location)}: {message}"

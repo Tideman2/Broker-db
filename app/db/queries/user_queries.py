@@ -55,3 +55,9 @@ SELECT id
 FROM users
 WHERE id = %s
 """
+
+UPDATE_USER_FULL_NAME = """
+UPDATE users
+SET full_name = %s
+WHERE id = %s
+"""
