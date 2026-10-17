@@ -1,8 +1,10 @@
 import os
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.email import email_service
 from app.services.redis_service import redis_client, close_redis
@@ -39,6 +41,47 @@ async def lifespan(app: FastAPI):
     await close_redis()
 
 app = FastAPI(lifespan=lifespan)
+
+
+def _format_validation_error(exc: RequestValidationError) -> str:
+    """
+    Collapse a pydantic validation error into a single human readable
+    string, so clients always receive {"detail": "<message>"} rather
+    than FastAPI's default list shaped body.
+    """
+    errors = exc.errors()
+
+    if not errors:
+        return "Invalid request."
+
+    first = errors[0]
+
+    location = [
+        str(part)
+        for part in first.get("loc", [])
+        if part not in ("body", "query", "path")
+    ]
+    message = first.get("msg", "Invalid request.")
+
+    if location:
+        return f"{'.'.join(location)}: {message}"
+
+    return message
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(
+    request: Request,
+    exc: RequestValidationError
+):
+    """
+    Return every validation error as {"detail": "<human string>"}.
+    """
+    return JSONResponse(
+        status_code=422,
+        content={"detail": _format_validation_error(exc)}
+    )
+
 
 app.add_middleware(
     CORSMiddleware,
