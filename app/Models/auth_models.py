@@ -129,6 +129,27 @@ class UpdateUserRequest(BaseModel):
         return stripped
 
 
+class CurrencyDisplay(str, Enum):
+    USD = "usd"
+    EUR = "eur"
+    GBP = "gbp"
+
+
+class UserPreferences(BaseModel):
+    """
+    Stored user preferences. Theme is intentionally excluded: it stays
+    a client only concern.
+    """
+    currency_display: CurrencyDisplay
+
+
+class UpdatePreferencesRequest(BaseModel):
+    """
+    Partial update of a user's preferences. Any subset may be sent.
+    """
+    currency_display: Optional[CurrencyDisplay] = None
+
+
 class CreateUserResponse(TypedDict):
     """
      Create user service response type

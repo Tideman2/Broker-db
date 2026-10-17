@@ -4,9 +4,12 @@ from app.db.connection import get_connection
 from app.Models.auth_models import (
     User,
     CreateUserResponse,
+    CurrencyDisplay,
     LoginUserRequest,
     ChangePasswordRequest,
     UpdateUserRequest,
+    UpdatePreferencesRequest,
+    UserPreferences,
     UserResponse,
     UserRole
 )
@@ -27,6 +30,11 @@ from app.db.queries.user_queries import (
     UPDATE_USER_FULL_NAME,
     UPDATE_USER_PASSWORD,
     USER_EXISTS
+)
+
+from app.db.queries.preferences_queries import (
+    GET_USER_PREFERENCES,
+    UPSERT_USER_PREFERENCES
 )
 
 from app.db.queries.admin_queries import (
@@ -314,6 +322,41 @@ async def change_password(user_id: int, data: ChangePasswordRequest):
     )
 
     return {"message": "Password updated."}
+
+
+def get_preferences(user_id: int) -> UserPreferences:
+    """
+    function to read a user's preferences.
+
+    Users who have never saved preferences are returned the defaults
+    rather than a null, so a preferences row is never created on read.
+    """
+    conn = None
+    cursor = None
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute(GET_USER_PREFERENCES, (user_id,))
+        row = cursor.fetchone()
+
+        if not row:
+            return UserPreferences(currency_display=CurrencyDisplay.USD)
+
+        return UserPreferences(currency_display=row["currency_display"])
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        ) from e
+    finally:
+        if cursor is not None:
+            cursor.close()
+        if conn is not None:
+            conn.close()
 
 
 async def check_if_email_and_password_is_correct(data: LoginUserRequest):

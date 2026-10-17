@@ -228,3 +228,18 @@ class TestChangePassword:
         )
 
         assert response.status_code in (401, 403), response.text
+
+
+class TestPreferencesRead:
+    def test_get_preferences_defaults_to_usd(self, api, user_account):
+        response = api.get(
+            "/user/preferences", headers=_auth(user_account["token"])
+        )
+
+        assert response.status_code == 200, response.text
+        assert response.json() == {"currency_display": "usd"}
+
+    def test_get_preferences_requires_auth(self, api):
+        response = api.get("/user/preferences")
+
+        assert response.status_code in (401, 403), response.text

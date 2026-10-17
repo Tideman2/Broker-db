@@ -2,7 +2,8 @@ from fastapi import APIRouter, Depends
 from app.services.user_services import (
     add_bank_withdraw_destination,
     add_crypto_withdraw_destination,
-    get_withdraw_destinations
+    get_withdraw_destinations,
+    get_preferences
 )
 
 from app.services.wallet_services import (
@@ -15,6 +16,8 @@ from app.Models.wallet_models import (
     AddCryptoDestinationRequest,
     DepositResponse
 )
+
+from app.Models.auth_models import UserPreferences
 
 from app.utils.jwt import get_current_user
 
@@ -75,6 +78,22 @@ def get_withdraw_destinations_endpoint(
     """
 
     return get_withdraw_destinations(
+        user_id=user.user_id,
+    )
+
+
+@user_router.get(
+    "/preferences",
+    response_model=UserPreferences
+)
+def get_preferences_endpoint(
+    user=Depends(get_current_user)
+):
+    """
+    Get the current user's preferences, defaulting when never saved.
+    """
+
+    return get_preferences(
         user_id=user.user_id,
     )
 
