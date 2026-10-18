@@ -50,6 +50,35 @@ def _open_positions_by_instrument(
     return open_positions
 
 
+def _market_value_of_open_positions(
+    cursor,
+    subscription_id: int
+) -> Decimal:
+    """
+    Marks a subscription's open positions to their instrument's current
+    price and returns the total value.
+    """
+
+    cursor.execute(
+        GET_SUBSCRIPTION_TRANSACTIONS,
+        (subscription_id,)
+    )
+    transactions = cursor.fetchall()
+
+    open_positions = _open_positions_by_instrument(transactions)
+
+    market_value = Decimal("0")
+
+    for instrument_id, quantity in open_positions.items():
+
+        cursor.execute(CHECK_INSTRUMENT_ANY, (instrument_id,))
+        instrument = cursor.fetchone()
+
+        market_value += instrument["current_price"] * quantity
+
+    return market_value
+
+
 def _liquidate_open_positions(
     cursor,
     subscription_id: int,

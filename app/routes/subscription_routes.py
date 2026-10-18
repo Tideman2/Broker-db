@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends
 
 from app.services.subscription_services import (
     cancel_subscription,
+    get_subscription_summaries,
     get_user_subscriptions,
     subscribe_to_a_plan
 )
@@ -9,7 +10,8 @@ from app.services.subscription_services import (
 from app.Models.plans_models import (
     SubscribeRequest,
     SubscriptionResponse,
-    SubscriptionsResponse
+    SubscriptionsResponse,
+    SubscriptionSummaryResponse
 )
 
 from app.utils.jwt import get_current_user
@@ -32,6 +34,19 @@ def get_subscriptions_endpoint(
     Get the current user's subscriptions.
     """
     return get_user_subscriptions(user_id=user.user_id)
+
+
+@subscription_router.get(
+    "/summary",
+    response_model=list[SubscriptionSummaryResponse]
+)
+def get_subscription_summaries_endpoint(
+    user=Depends(get_current_user)
+):
+    """
+    Get a profit summary for the current user's active subscriptions.
+    """
+    return get_subscription_summaries(user_id=user.user_id)
 
 
 @subscription_router.post(

@@ -536,3 +536,82 @@ class TestExpirySettlement:
         )
 
         assert response.status_code == 404, response.text
+
+
+class TestSubscriptionSummary:
+    def _buy(self, api, admin_account, user, instrument, subscription, qty):
+        return api.post(
+            f"/portfolio/admin/buy/{user['id']}",
+            json={
+                "instrument_id": instrument["id"],
+                "quantity": qty,
+                "subscription_id": subscription["id"],
+            },
+            headers=_auth(admin_account["token"]),
+        )
+
+    def _summary(self, api, user, subscription_id):
+        response = api.get(
+            "/subscription/summary", headers=_auth(user["token"])
+        )
+        assert response.status_code == 200, response.text
+        return next(
+            s
+            for s in response.json()
+            if s["subscription_id"] == subscription_id
+        )
+
+    def test_summary_of_fresh_subscription(
+        self, api, funded_user, plan
+    ):
+        subscription = _subscribe(api, funded_user, plan, "100")
+
+        summary = self._summary(api, funded_user, subscription["id"])
+
+        assert float(summary["principal"]) == 100.0
+        assert float(summary["current_value"]) == 100.0
+        assert float(summary["profit_loss"]) == 0.0
+        assert float(summary["roi_percent"]) == 0.0
+        assert summary["status"] == "ACTIVE"
+
+    def test_summary_marks_positions_to_market(
+        self, api, admin_account, funded_user, plan, cheap_instrument
+    ):
+        subscription = _subscribe(api, funded_user, plan, "100")
+        self._buy(
+            api, admin_account, funded_user, cheap_instrument, subscription, "2"
+        )
+
+        # 90 pool + 2 units @ 5 = 100, unchanged
+        summary = self._summary(api, funded_user, subscription["id"])
+        assert float(summary["current_value"]) == 100.0
+
+        # Move the market price to 7.50 -> 2 units now worth 15
+        update = api.put(
+            f"/instruments/{cheap_instrument['id']}",
+            json={"current_price": "7.50"},
+            headers=_auth(admin_account["token"]),
+        )
+        assert update.status_code == 200, update.text
+
+        summary = self._summary(api, funded_user, subscription["id"])
+        assert float(summary["current_value"]) == 105.0
+        assert float(summary["profit_loss"]) == 5.0
+        assert float(summary["roi_percent"]) == 5.0
+
+    def test_summary_only_covers_active_subscriptions(
+        self, api, funded_user, plan
+    ):
+        subscription = _subscribe(api, funded_user, plan, "100")
+
+        api.post(
+            f"/subscription/cancel/{subscription['id']}",
+            headers=_auth(funded_user["token"]),
+        )
+
+        response = api.get(
+            "/subscription/summary", headers=_auth(funded_user["token"])
+        )
+
+        assert response.status_code == 200, response.text
+        assert response.json() == []

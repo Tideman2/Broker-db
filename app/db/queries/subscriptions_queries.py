@@ -91,6 +91,14 @@ AND user_id = %s
 AND status = 'ACTIVE';
 """
 
+GET_ACTIVE_SUBSCRIPTIONS_BY_USER = """
+SELECT *
+FROM subscriptions
+WHERE user_id = %s
+AND status = 'ACTIVE'
+ORDER BY created_at DESC;
+"""
+
 # ============================
 # POOL
 # ============================

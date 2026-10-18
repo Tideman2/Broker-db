@@ -13,10 +13,12 @@ from app.utils.plans import (
     _validate_active_plan,
     _validate_minimum_investment,
     _build_subscription_response,
+    _build_subscription_summary,
     _build_subscription_list,
     _build_subscriptions_response,
     _get_subscription,
     _get_user_subscriptions,
+    _get_active_subscriptions,
     _validate_no_active_subscription,
     _get_active_subscription,
     _cancel_subscription,
@@ -119,6 +121,41 @@ def subscribe_to_a_plan(
     except Exception as e:
         conn.rollback()
 
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        ) from e
+
+    finally:
+        cursor.close()
+        conn.close()
+
+
+def get_subscription_summaries(
+        user_id: int
+):
+    """
+    Gets a profit summary for each of the user's active subscriptions.
+    """
+
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    try:
+        subscriptions = _get_active_subscriptions(
+            cursor,
+            user_id
+        )
+
+        return [
+            _build_subscription_summary(cursor, subscription)
+            for subscription in subscriptions
+        ]
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
         raise HTTPException(
             status_code=500,
             detail=str(e)

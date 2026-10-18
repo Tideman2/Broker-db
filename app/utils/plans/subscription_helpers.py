@@ -8,6 +8,7 @@ from app.db.queries.subscriptions_queries import (
     COMPLETE_SUBSCRIPTION,
     CANCEL_SUBSCRIPTION,
     GET_ACTIVE_SUBSCRIPTION_BY_USER_AND_PLAN,
+    GET_ACTIVE_SUBSCRIPTIONS_BY_USER,
     DEBIT_SUBSCRIPTION_POOL,
     CREDIT_SUBSCRIPTION_POOL
 )
@@ -174,6 +175,22 @@ def _get_user_subscriptions(
 ):
     cursor.execute(
         GET_USER_SUBSCRIPTIONS,
+        (user_id,)
+    )
+
+    return cursor.fetchall()
+
+
+def _get_active_subscriptions(
+    cursor,
+    user_id: int
+):
+    """
+    Returns every active subscription belonging to a user.
+    """
+
+    cursor.execute(
+        GET_ACTIVE_SUBSCRIPTIONS_BY_USER,
         (user_id,)
     )
 
