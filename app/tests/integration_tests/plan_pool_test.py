@@ -355,3 +355,95 @@ class TestAdminTradingUnderSubscription:
         )
 
         assert response.status_code in (404, 405), response.text
+
+
+class TestCancelSettlement:
+    def _buy(self, api, admin_account, user, instrument, subscription, qty):
+        return api.post(
+            f"/portfolio/admin/buy/{user['id']}",
+            json={
+                "instrument_id": instrument["id"],
+                "quantity": qty,
+                "subscription_id": subscription["id"],
+            },
+            headers=_auth(admin_account["token"]),
+        )
+
+    def test_cancel_settles_immediately(
+        self, api, admin_account, funded_user, plan, cheap_instrument
+    ):
+        subscription = _subscribe(api, funded_user, plan, "100")
+        self._buy(
+            api, admin_account, funded_user, cheap_instrument, subscription, "2"
+        )
+        available_before = float(_wallet(funded_user["id"])["available"])
+
+        response = api.post(
+            f"/subscription/cancel/{subscription['id']}",
+            headers=_auth(funded_user["token"]),
+        )
+
+        assert response.status_code == 200, response.text
+        body = response.json()
+        assert body["status"] == "CANCELLED"
+        assert float(body["pool"]) == 0.0
+
+        # 90 pool + 10 liquidation proceeds (2 @ 5) return to available
+        available_after = float(_wallet(funded_user["id"])["available"])
+        assert available_after - available_before == 100.0
+
+    def test_cancel_liquidates_open_positions(
+        self, api, admin_account, funded_user, plan, cheap_instrument
+    ):
+        subscription = _subscribe(api, funded_user, plan, "100")
+        self._buy(
+            api, admin_account, funded_user, cheap_instrument, subscription, "2"
+        )
+
+        api.post(
+            f"/subscription/cancel/{subscription['id']}",
+            headers=_auth(funded_user["token"]),
+        )
+
+        liquidation = _last_transaction(funded_user["id"])
+        assert liquidation["type"] == "SELL"
+        assert liquidation["subscription_id"] == subscription["id"]
+        assert float(liquidation["quantity"]) == 2.0
+
+    def test_cancel_without_positions_releases_pool(
+        self, api, funded_user, plan
+    ):
+        subscription = _subscribe(api, funded_user, plan, "100")
+        available_before = float(_wallet(funded_user["id"])["available"])
+
+        api.post(
+            f"/subscription/cancel/{subscription['id']}",
+            headers=_auth(funded_user["token"]),
+        )
+
+        assert _pool(subscription["id"]) == 0.0
+        available_after = float(_wallet(funded_user["id"])["available"])
+        assert available_after - available_before == 100.0
+
+    def test_cancel_unknown_subscription_rejected(self, api, funded_user):
+        response = api.post(
+            "/subscription/cancel/999999999",
+            headers=_auth(funded_user["token"]),
+        )
+
+        assert response.status_code in (401, 404), response.text
+
+    def test_cancelled_subscription_cannot_be_traded(
+        self, api, admin_account, funded_user, plan, cheap_instrument
+    ):
+        subscription = _subscribe(api, funded_user, plan, "100")
+        api.post(
+            f"/subscription/cancel/{subscription['id']}",
+            headers=_auth(funded_user["token"]),
+        )
+
+        response = self._buy(
+            api, admin_account, funded_user, cheap_instrument, subscription, "1"
+        )
+
+        assert response.status_code == 404, response.text

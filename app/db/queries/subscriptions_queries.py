@@ -108,6 +108,31 @@ SET pool = pool + %s
 WHERE id = %s
 """
 
+ZERO_SUBSCRIPTION_POOL = """
+UPDATE subscriptions
+SET pool = 0
+WHERE id = %s
+"""
+
+GET_SUBSCRIPTION_TRANSACTIONS = """
+SELECT
+    instrument_id,
+    type,
+    quantity,
+    price,
+    executed_at
+FROM transactions
+WHERE subscription_id = %s
+ORDER BY executed_at, id
+"""
+
+GET_DUE_SUBSCRIPTIONS = """
+SELECT *
+FROM subscriptions
+WHERE status = 'ACTIVE'
+AND expiration_date <= NOW()
+"""
+
 # ============================
 # VALIDATION QUERIES
 # ============================

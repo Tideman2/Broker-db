@@ -19,7 +19,8 @@ from app.utils.plans import (
     _get_user_subscriptions,
     _validate_no_active_subscription,
     _get_active_subscription,
-    _cancel_subscription
+    _cancel_subscription,
+    _settle_subscription
 )
 
 from app.utils.wallet import (
@@ -144,10 +145,16 @@ def cancel_subscription(
         _get_active_subscription(
             cursor, user_id, subscription_id)
 
-        _cancel_subscription(cursor, subscription_id)
+        # Settle immediately: liquidate any open positions back into the
+        # pool, return the pool to the user's available balance, and mark
+        # the subscription CANCELLED.
+        _settle_subscription(
+            cursor, subscription_id, user_id, "CANCELLED")
+
+        subscription = _get_subscription(cursor, subscription_id)
 
         conn.commit()
-        return {"message": "Subscription cancelled", "id": subscription_id}
+        return _build_subscription_response(subscription)
 
     except HTTPException:
         conn.rollback()
