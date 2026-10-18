@@ -29,8 +29,10 @@ Give every plan subscription its own funded **pool** so that:
   `pool >= cost` (else `400 {"detail": "Insufficient subscription pool."}`);
   `pool -= cost`; insert BUY with `subscription_id`.
 - **Sell (admin only):** request names `subscription_id`; same
-  ownership/active checks; existing `qty <= net qty` check stands;
-  `pool += proceeds`; insert SELL with `subscription_id`.
+  ownership/active checks; the quantity is checked against the position
+  held under that subscription (not the user's combined holdings, since
+  each subscription has its own pool and open lots); `pool += proceeds`;
+  insert SELL with `subscription_id`.
 - **Cancel:** settles immediately (see below), status `CANCELLED`.
 - **Expiry:** a 24h background sweep settles `ACTIVE` subscriptions whose
   `expiration_date <= now`, status `COMPLETED`.

@@ -16,7 +16,8 @@ from app.services.pagination_service import PaginationRequest
 from app.utils.plans.subscription_helpers import (
     _require_active_subscription,
     _credit_subscription_pool,
-    _debit_subscription_pool
+    _debit_subscription_pool,
+    _get_subscription_instrument_transactions
 )
 
 from app.utils.portfolio_helpers import _get_user, _get_instrument, _compute_net_quantity
@@ -114,12 +115,17 @@ def sell_instrument(
         # Validate quantity
         _validate_quantity(data.quantity)
 
-        # fetch transaction history
-        cursor.execute(GET_USER_INSTRUMENT_TRANSACTIONS,
-                       (user_id, data.instrument_id))
-        instrument_transactions = cursor.fetchall()
+        # A trade must draw on the user's own active subscription pool.
+        _require_active_subscription(
+            cursor, user_id, data.subscription_id)
 
-        # Calculate net quantity
+        # The position must be covered by the named subscription itself,
+        # not by holdings the user happens to have under other
+        # subscriptions (each has its own pool and open lots).
+        instrument_transactions = _get_subscription_instrument_transactions(
+            cursor, data.subscription_id, data.instrument_id)
+
+        # Calculate net quantity under this subscription
         net_quantity = _compute_net_quantity(instrument_transactions)
 
         # Validate Quantity againts net quantity
@@ -128,10 +134,6 @@ def sell_instrument(
                 status_code=400,
                 detail="Insufficient quantity."
             )
-
-        # A trade must draw on the user's own active subscription pool.
-        _require_active_subscription(
-            cursor, user_id, data.subscription_id)
 
         price = instrument["current_price"]
 

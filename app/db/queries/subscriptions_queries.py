@@ -134,6 +134,19 @@ WHERE subscription_id = %s
 ORDER BY executed_at, id
 """
 
+GET_SUBSCRIPTION_INSTRUMENT_TRANSACTIONS = """
+SELECT
+    instrument_id,
+    type,
+    quantity,
+    price,
+    executed_at
+FROM transactions
+WHERE subscription_id = %s
+AND instrument_id = %s
+ORDER BY executed_at, id
+"""
+
 GET_DUE_SUBSCRIPTIONS = """
 SELECT *
 FROM subscriptions

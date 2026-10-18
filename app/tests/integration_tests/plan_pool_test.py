@@ -118,6 +118,37 @@ def plan(api, admin_account):
 
 
 @pytest.fixture()
+def second_plan(api, admin_account):
+    title = f"Pool Plan {uuid.uuid4().hex[:8]}"
+    response = api.post(
+        "/plan/create",
+        json={
+            "plan": {
+                "title": title,
+                "min_amount": "10",
+                "duration": 30,
+                "roi": "12",
+                "risk_management": "STANDARD",
+                "description": "Pool test plan two",
+            },
+            "features": ["Forex"],
+        },
+        headers=_auth(admin_account["token"]),
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+
+    yield body
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM plans WHERE id = %s", (body["id"],))
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+
+@pytest.fixture()
 def cheap_instrument(api, admin_account):
     symbol = f"POL{uuid.uuid4().hex[:8].upper()}"
     response = api.post(
@@ -615,3 +646,46 @@ class TestSubscriptionSummary:
 
         assert response.status_code == 200, response.text
         assert response.json() == []
+
+
+class TestSubscriptionScopedSelling:
+    def _buy(self, api, admin_account, user, instrument, subscription, qty):
+        return api.post(
+            f"/portfolio/admin/buy/{user['id']}",
+            json={
+                "instrument_id": instrument["id"],
+                "quantity": qty,
+                "subscription_id": subscription["id"],
+            },
+            headers=_auth(admin_account["token"]),
+        )
+
+    def test_sell_cannot_exceed_subscription_holdings(
+        self,
+        api,
+        admin_account,
+        funded_user,
+        plan,
+        second_plan,
+        cheap_instrument,
+    ):
+        sub_one = _subscribe(api, funded_user, plan, "100")
+        sub_two = _subscribe(api, funded_user, second_plan, "100")
+
+        # The user holds two units in total, but only one under sub_one.
+        self._buy(api, admin_account, funded_user, cheap_instrument, sub_one, "1")
+        self._buy(api, admin_account, funded_user, cheap_instrument, sub_two, "1")
+
+        response = api.post(
+            f"/portfolio/admin/sell/{funded_user['id']}",
+            json={
+                "instrument_id": cheap_instrument["id"],
+                "quantity": "2",
+                "subscription_id": sub_one["id"],
+            },
+            headers=_auth(admin_account["token"]),
+        )
+
+        assert response.status_code == 400, response.text
+        assert response.json()["detail"] == "Insufficient quantity."
+        assert _pool(sub_one["id"]) == 95.0

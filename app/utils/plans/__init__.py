@@ -43,6 +43,7 @@ from .subscription_helpers import (
     _get_active_subscription,
     _require_active_subscription,
     _get_active_subscriptions,
+    _get_subscription_instrument_transactions,
     _get_subscription,
     _get_user_subscriptions,
     _validate_no_active_subscription,
