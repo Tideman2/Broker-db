@@ -81,6 +81,70 @@ def _create(api, token, symbol=None, category_id=1, price="10.00"):
     )
 
 
+def _fund(api, admin_account, user, amount="100.00"):
+    dep = api.post(
+        "/wallet/deposit",
+        json={
+            "deposit": {
+                "amount": amount,
+                "asset_id": 1,
+                "payment_method": 1,
+            }
+        },
+        headers=_auth(user["token"]),
+    )
+    assert dep.status_code == 200, dep.text
+    confirm = api.post(
+        f"/wallet/deposits/{dep.json()['id']}/confirm",
+        headers=_auth(admin_account["token"]),
+    )
+    assert confirm.status_code == 200, confirm.text
+
+
+@pytest.fixture()
+def plan(api, admin_account):
+    title = f"Inst Plan {uuid.uuid4().hex[:8]}"
+    response = api.post(
+        "/plan/create",
+        json={
+            "plan": {
+                "title": title,
+                "min_amount": "10",
+                "duration": 30,
+                "roi": "12",
+                "risk_management": "STANDARD",
+                "description": "Instrument test plan",
+            },
+            "features": ["Forex"],
+        },
+        headers=_auth(admin_account["token"]),
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+
+    yield body
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM plans WHERE id = %s", (body["id"],))
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+
+@pytest.fixture()
+def subscription(api, admin_account, user_account, plan):
+    _fund(api, admin_account, user_account)
+
+    response = api.post(
+        "/subscription/subscribe",
+        json={"plan_id": plan["id"], "amount": "100"},
+        headers=_auth(user_account["token"]),
+    )
+    assert response.status_code == 200, response.text
+    return response.json()
+
+
 class TestAdminInstruments:
     def test_create_instrument(self, api, admin_account):
         symbol = _symbol()
@@ -162,7 +226,7 @@ class TestAdminInstruments:
         assert row["is_active"] is False
 
     def test_inactive_instrument_not_buyable(
-        self, api, admin_account, user_account
+        self, api, admin_account, user_account, subscription
     ):
         created = _create(api, admin_account["token"], price="5.00")
         assert created.status_code == 200, created.text
@@ -174,53 +238,47 @@ class TestAdminInstruments:
             headers=_auth(admin_account["token"]),
         )
 
-        # penniless user: inactive -> 404 (guard fires before funds check)
+        # inactive instrument -> 404 (guard fires before the pool check)
         blocked = api.post(
-            "/portfolio/buy",
-            json={"instrument_id": inst_id, "quantity": "1"},
-            headers=_auth(user_account["token"]),
+            f"/portfolio/admin/buy/{user_account['id']}",
+            json={
+                "instrument_id": inst_id,
+                "quantity": "1",
+                "subscription_id": subscription["id"],
+            },
+            headers=_auth(admin_account["token"]),
         )
         assert blocked.status_code == 404, blocked.text
 
-        # same penniless user on an active instrument -> 400 funds
+        # active instrument the pool cannot cover -> 400
         active = _create(api, admin_account["token"], price="5.00")
         active_id = active.json()["id"]
         poor = api.post(
-            "/portfolio/buy",
-            json={"instrument_id": active_id, "quantity": "1"},
-            headers=_auth(user_account["token"]),
+            f"/portfolio/admin/buy/{user_account['id']}",
+            json={
+                "instrument_id": active_id,
+                "quantity": "1000",
+                "subscription_id": subscription["id"],
+            },
+            headers=_auth(admin_account["token"]),
         )
         assert poor.status_code == 400, poor.text
 
     def test_history_survives_deactivation(
-        self, api, admin_account, user_account
+        self, api, admin_account, user_account, subscription
     ):
         created = _create(api, admin_account["token"], price="5.00")
         assert created.status_code == 200, created.text
         inst_id = created.json()["id"]
 
-        dep = api.post(
-            "/wallet/deposit",
-            json={
-                "deposit": {
-                    "amount": "100.00",
-                    "asset_id": 1,
-                    "payment_method": 1,
-                }
-            },
-            headers=_auth(user_account["token"]),
-        )
-        assert dep.status_code == 200, dep.text
-        conf = api.post(
-            f"/wallet/deposits/{dep.json()['id']}/confirm",
-            headers=_auth(admin_account["token"]),
-        )
-        assert conf.status_code == 200, conf.text
-
         buy = api.post(
-            "/portfolio/buy",
-            json={"instrument_id": inst_id, "quantity": "1"},
-            headers=_auth(user_account["token"]),
+            f"/portfolio/admin/buy/{user_account['id']}",
+            json={
+                "instrument_id": inst_id,
+                "quantity": "1",
+                "subscription_id": subscription["id"],
+            },
+            headers=_auth(admin_account["token"]),
         )
         assert buy.status_code == 200, buy.text
 
@@ -238,34 +296,20 @@ class TestAdminInstruments:
         assert inst_id in ids
 
     def test_sell_still_allowed_after_deactivation(
-        self, api, admin_account, user_account
+        self, api, admin_account, user_account, subscription
     ):
         created = _create(api, admin_account["token"], price="5.00")
         assert created.status_code == 200, created.text
         inst_id = created.json()["id"]
 
-        dep = api.post(
-            "/wallet/deposit",
-            json={
-                "deposit": {
-                    "amount": "100.00",
-                    "asset_id": 1,
-                    "payment_method": 1,
-                }
-            },
-            headers=_auth(user_account["token"]),
-        )
-        assert dep.status_code == 200, dep.text
-        conf = api.post(
-            f"/wallet/deposits/{dep.json()['id']}/confirm",
-            headers=_auth(admin_account["token"]),
-        )
-        assert conf.status_code == 200, conf.text
-
         buy = api.post(
-            "/portfolio/buy",
-            json={"instrument_id": inst_id, "quantity": "2"},
-            headers=_auth(user_account["token"]),
+            f"/portfolio/admin/buy/{user_account['id']}",
+            json={
+                "instrument_id": inst_id,
+                "quantity": "2",
+                "subscription_id": subscription["id"],
+            },
+            headers=_auth(admin_account["token"]),
         )
         assert buy.status_code == 200, buy.text
 
@@ -277,9 +321,13 @@ class TestAdminInstruments:
         assert off.status_code == 200, off.text
 
         sell = api.post(
-            "/portfolio/sell",
-            json={"instrument_id": inst_id, "quantity": "1"},
-            headers=_auth(user_account["token"]),
+            f"/portfolio/admin/sell/{user_account['id']}",
+            json={
+                "instrument_id": inst_id,
+                "quantity": "1",
+                "subscription_id": subscription["id"],
+            },
+            headers=_auth(admin_account["token"]),
         )
         assert sell.status_code == 200, sell.text
 
