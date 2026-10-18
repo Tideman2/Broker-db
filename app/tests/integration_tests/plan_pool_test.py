@@ -1,10 +1,12 @@
 import uuid
+from datetime import datetime, timedelta, UTC
 
 import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
 from app.db.connection import get_connection
+from app.services.settlement_service import run_expiry_sweep
 
 
 @pytest.fixture()
@@ -163,6 +165,30 @@ def _pool(subscription_id):
     cursor.close()
     conn.close()
     return float(row["pool"])
+
+
+def _subscription_row(subscription_id):
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute(
+        "SELECT * FROM subscriptions WHERE id = %s", (subscription_id,)
+    )
+    row = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    return row
+
+
+def _force_expire(subscription_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "UPDATE subscriptions SET expiration_date = %s WHERE id = %s",
+        (datetime.now(UTC) - timedelta(days=1), subscription_id),
+    )
+    conn.commit()
+    cursor.close()
+    conn.close()
 
 
 def _last_transaction(user_id):
@@ -441,6 +467,69 @@ class TestCancelSettlement:
             f"/subscription/cancel/{subscription['id']}",
             headers=_auth(funded_user["token"]),
         )
+
+        response = self._buy(
+            api, admin_account, funded_user, cheap_instrument, subscription, "1"
+        )
+
+        assert response.status_code == 404, response.text
+
+
+class TestExpirySettlement:
+    def _buy(self, api, admin_account, user, instrument, subscription, qty):
+        return api.post(
+            f"/portfolio/admin/buy/{user['id']}",
+            json={
+                "instrument_id": instrument["id"],
+                "quantity": qty,
+                "subscription_id": subscription["id"],
+            },
+            headers=_auth(admin_account["token"]),
+        )
+
+    def test_expiry_sweep_settles_due_subscription(
+        self, api, admin_account, funded_user, plan, cheap_instrument
+    ):
+        subscription = _subscribe(api, funded_user, plan, "100")
+        self._buy(
+            api, admin_account, funded_user, cheap_instrument, subscription, "2"
+        )
+        available_before = float(_wallet(funded_user["id"])["available"])
+        _force_expire(subscription["id"])
+
+        settled = run_expiry_sweep()
+
+        assert settled == 1
+        row = _subscription_row(subscription["id"])
+        assert row["status"] == "COMPLETED"
+        assert float(row["pool"]) == 0.0
+
+        # 90 pool + 10 liquidation proceeds (2 @ 5) return to available
+        available_after = float(_wallet(funded_user["id"])["available"])
+        assert available_after - available_before == 100.0
+
+        liquidation = _last_transaction(funded_user["id"])
+        assert liquidation["type"] == "SELL"
+        assert liquidation["subscription_id"] == subscription["id"]
+
+    def test_expiry_sweep_leaves_unexpired_subscription_alone(
+        self, api, funded_user, plan
+    ):
+        subscription = _subscribe(api, funded_user, plan, "100")
+
+        settled = run_expiry_sweep()
+
+        assert settled == 0
+        row = _subscription_row(subscription["id"])
+        assert row["status"] == "ACTIVE"
+        assert float(row["pool"]) == 100.0
+
+    def test_expired_subscription_cannot_be_traded(
+        self, api, admin_account, funded_user, plan, cheap_instrument
+    ):
+        subscription = _subscribe(api, funded_user, plan, "100")
+        _force_expire(subscription["id"])
+        run_expiry_sweep()
 
         response = self._buy(
             api, admin_account, funded_user, cheap_instrument, subscription, "1"

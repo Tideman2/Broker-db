@@ -9,6 +9,7 @@ from fastapi.responses import JSONResponse
 
 from app.email import email_service
 from app.services.redis_service import redis_client, close_redis
+from app.services.settlement_service import settlement_service
 
 from app.routes.auth_routes import auth_router
 from app.routes.admin_routes import admin_router
@@ -33,11 +34,15 @@ async def lifespan(app: FastAPI):
     await redis_client.ping()
     # Start email workers
     email_service.start()
+    # Start the subscription expiry worker
+    settlement_service.start()
 
     yield
 
     # Stop email workers
     email_service.stop()
+    # Stop the subscription expiry worker
+    settlement_service.stop()
     # Close Redis connection
     await close_redis()
 
