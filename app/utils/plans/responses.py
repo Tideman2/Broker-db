@@ -19,6 +19,7 @@ def _build_subscription_response(
         invested_amount=subscription["invested_amount"].quantize(
             Decimal("0.01")
         ),
+        pool=subscription["pool"].quantize(Decimal("0.01")),
         expiration_date=subscription["expiration_date"],
         status=subscription["status"],
         created_at=subscription["created_at"],

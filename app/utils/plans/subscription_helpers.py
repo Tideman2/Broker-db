@@ -70,6 +70,7 @@ def _create_subscription(
             subscription.plan_id,
             subscription.invested_amount,
             subscription.expiration_date,
+            subscription.invested_amount,
         )
     )
 

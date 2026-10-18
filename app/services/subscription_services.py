@@ -25,7 +25,7 @@ from app.utils.plans import (
 from app.utils.wallet import (
     _get_wallet,
     _validate_available_balance,
-    _lock_funds
+    _debit_available
 )
 
 
@@ -89,7 +89,9 @@ def subscribe_to_a_plan(
             data.plan_id
         )
 
-        _lock_funds(cursor, user_id, data.amount)
+        # Move the invested amount out of the user's available balance and
+        # into the subscription's own pool.
+        _debit_available(cursor, user_id, data.amount)
 
         # compute expitration date using plan duration
         expiration_date = datetime.now(UTC) + timedelta(days=plan["duration"])

@@ -86,6 +86,7 @@ class SubscriptionResponse(BaseModel):
     plan_id: int
     plan_title: str
     invested_amount: Decimal
+    pool: Decimal
     expiration_date: datetime
     status: SubscriptionStatus
     created_at: datetime

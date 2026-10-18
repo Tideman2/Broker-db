@@ -8,9 +8,11 @@ INSERT INTO subscriptions (
     plan_id,
     invested_amount,
     expiration_date,
+    pool,
     status
 )
 VALUES (
+    %s,
     %s,
     %s,
     %s,
