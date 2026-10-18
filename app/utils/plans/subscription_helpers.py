@@ -7,7 +7,9 @@ from app.db.queries.subscriptions_queries import (
     INSERT_SUBSCRIPTION,
     COMPLETE_SUBSCRIPTION,
     CANCEL_SUBSCRIPTION,
-    GET_ACTIVE_SUBSCRIPTION_BY_USER_AND_PLAN
+    GET_ACTIVE_SUBSCRIPTION_BY_USER_AND_PLAN,
+    DEBIT_SUBSCRIPTION_POOL,
+    CREDIT_SUBSCRIPTION_POOL
 )
 
 from app.Models.plans_models import (
@@ -187,3 +189,68 @@ def _calculate_subscription_profit(
     """
 
     return current_value - invested_amount
+
+
+def _require_active_subscription(
+    cursor,
+    user_id: int,
+    subscription_id: int
+):
+    """
+    Returns the user's own active subscription or raises 404.
+    Used by trading so a trade can only draw on the user's active plan.
+    """
+
+    cursor.execute(
+        GET_ACTIVE_SUBSCRIPTION,
+        (
+            subscription_id,
+            user_id,
+        )
+    )
+
+    subscription = cursor.fetchone()
+
+    if not subscription:
+        raise HTTPException(
+            status_code=404,
+            detail="Active subscription not found."
+        )
+
+    return subscription
+
+
+def _debit_subscription_pool(
+    cursor,
+    subscription_id: int,
+    amount: Decimal
+):
+    """
+    Debits a subscription pool, rejecting a trade the pool cannot cover.
+    """
+
+    cursor.execute(
+        DEBIT_SUBSCRIPTION_POOL,
+        (amount, subscription_id, amount)
+    )
+
+    if cursor.rowcount == 0:
+        raise HTTPException(
+            status_code=400,
+            detail="Insufficient subscription pool."
+        )
+
+
+def _credit_subscription_pool(
+    cursor,
+    subscription_id: int,
+    amount: Decimal
+):
+    """
+    Credits a subscription pool.
+    """
+
+    cursor.execute(
+        CREDIT_SUBSCRIPTION_POOL,
+        (amount, subscription_id)
+    )

@@ -153,6 +153,31 @@ def _wallet(user_id):
     return row
 
 
+def _pool(subscription_id):
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute(
+        "SELECT pool FROM subscriptions WHERE id = %s", (subscription_id,)
+    )
+    row = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    return float(row["pool"])
+
+
+def _last_transaction(user_id):
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute(
+        "SELECT * FROM transactions WHERE user_id = %s ORDER BY id DESC LIMIT 1",
+        (user_id,),
+    )
+    row = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    return row
+
+
 def _subscribe(api, user, plan, amount="100"):
     response = api.post(
         "/subscription/subscribe",
@@ -189,3 +214,144 @@ class TestSubscriptionPool:
         subscriptions = response.json()["subscriptions"]
         assert len(subscriptions) == 1
         assert float(subscriptions[0]["pool"]) == 100.0
+
+
+class TestAdminTradingUnderSubscription:
+    def test_admin_buy_debits_pool(
+        self, api, admin_account, funded_user, plan, cheap_instrument
+    ):
+        subscription = _subscribe(api, funded_user, plan, "100")
+
+        response = api.post(
+            f"/portfolio/admin/buy/{funded_user['id']}",
+            json={
+                "instrument_id": cheap_instrument["id"],
+                "quantity": "2",
+                "subscription_id": subscription["id"],
+            },
+            headers=_auth(admin_account["token"]),
+        )
+
+        assert response.status_code == 200, response.text
+        assert _pool(subscription["id"]) == 90.0
+
+    def test_admin_buy_records_subscription_id(
+        self, api, admin_account, funded_user, plan, cheap_instrument
+    ):
+        subscription = _subscribe(api, funded_user, plan, "100")
+
+        api.post(
+            f"/portfolio/admin/buy/{funded_user['id']}",
+            json={
+                "instrument_id": cheap_instrument["id"],
+                "quantity": "2",
+                "subscription_id": subscription["id"],
+            },
+            headers=_auth(admin_account["token"]),
+        )
+
+        assert (
+            _last_transaction(funded_user["id"])["subscription_id"]
+            == subscription["id"]
+        )
+
+    def test_admin_buy_requires_subscription_id(
+        self, api, admin_account, funded_user, cheap_instrument
+    ):
+        response = api.post(
+            f"/portfolio/admin/buy/{funded_user['id']}",
+            json={
+                "instrument_id": cheap_instrument["id"],
+                "quantity": "2",
+            },
+            headers=_auth(admin_account["token"]),
+        )
+
+        assert response.status_code == 422, response.text
+
+    def test_admin_buy_unknown_subscription_returns_404(
+        self, api, admin_account, funded_user, cheap_instrument
+    ):
+        response = api.post(
+            f"/portfolio/admin/buy/{funded_user['id']}",
+            json={
+                "instrument_id": cheap_instrument["id"],
+                "quantity": "2",
+                "subscription_id": 999999999,
+            },
+            headers=_auth(admin_account["token"]),
+        )
+
+        assert response.status_code == 404, response.text
+
+    def test_admin_buy_insufficient_pool(
+        self, api, admin_account, funded_user, plan, cheap_instrument
+    ):
+        subscription = _subscribe(api, funded_user, plan, "100")
+
+        response = api.post(
+            f"/portfolio/admin/buy/{funded_user['id']}",
+            json={
+                "instrument_id": cheap_instrument["id"],
+                "quantity": "1000",
+                "subscription_id": subscription["id"],
+            },
+            headers=_auth(admin_account["token"]),
+        )
+
+        assert response.status_code == 400, response.text
+        assert response.json() == {
+            "detail": "Insufficient subscription pool."
+        }
+        assert _pool(subscription["id"]) == 100.0
+
+    def test_admin_sell_credits_pool(
+        self, api, admin_account, funded_user, plan, cheap_instrument
+    ):
+        subscription = _subscribe(api, funded_user, plan, "100")
+        api.post(
+            f"/portfolio/admin/buy/{funded_user['id']}",
+            json={
+                "instrument_id": cheap_instrument["id"],
+                "quantity": "2",
+                "subscription_id": subscription["id"],
+            },
+            headers=_auth(admin_account["token"]),
+        )
+
+        response = api.post(
+            f"/portfolio/admin/sell/{funded_user['id']}",
+            json={
+                "instrument_id": cheap_instrument["id"],
+                "quantity": "1",
+                "subscription_id": subscription["id"],
+            },
+            headers=_auth(admin_account["token"]),
+        )
+
+        assert response.status_code == 200, response.text
+        assert _pool(subscription["id"]) == 95.0
+
+    def test_user_buy_route_removed(self, api, funded_user, cheap_instrument):
+        response = api.post(
+            "/portfolio/buy",
+            json={
+                "instrument_id": cheap_instrument["id"],
+                "quantity": "1",
+            },
+            headers=_auth(funded_user["token"]),
+        )
+
+        assert response.status_code in (404, 405), response.text
+
+    def test_user_sell_route_removed(self, api, funded_user, cheap_instrument):
+        response = api.post(
+            "/portfolio/sell",
+            json={
+                "instrument_id": cheap_instrument["id"],
+                "quantity": "1",
+            },
+            headers=_auth(funded_user["token"]),
+        )
+
+        assert response.status_code in (404, 405), response.text

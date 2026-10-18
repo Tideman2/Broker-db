@@ -13,9 +13,10 @@ from app.db.queries.transaction_queries import INSERT_BUY_TRANSACTION, INSERT_SE
 
 from app.services.pagination_service import PaginationRequest
 
-from app.utils.wallet import (
-    _credit_available,
-    _debit_available
+from app.utils.plans.subscription_helpers import (
+    _require_active_subscription,
+    _credit_subscription_pool,
+    _debit_subscription_pool
 )
 
 from app.utils.portfolio_helpers import _get_user, _get_instrument, _compute_net_quantity
@@ -43,11 +44,17 @@ def buy_instrument(
 
         # Validate quantity
         _validate_quantity(data.quantity)
+
+        # A trade must draw on the user's own active subscription pool.
+        _require_active_subscription(
+            cursor, user_id, data.subscription_id)
+
         price = instrument["current_price"]
 
         buy_cost = price * data.quantity
 
-        _debit_available(cursor, user_id, buy_cost)
+        _debit_subscription_pool(
+            cursor, data.subscription_id, buy_cost)
 
         # Insert BUY transaction
         cursor.execute(
@@ -55,6 +62,7 @@ def buy_instrument(
             (
                 user_id,
                 data.instrument_id,
+                data.subscription_id,
                 data.quantity,
                 price
             )
@@ -120,6 +128,11 @@ def sell_instrument(
                 status_code=400,
                 detail="Insufficient quantity."
             )
+
+        # A trade must draw on the user's own active subscription pool.
+        _require_active_subscription(
+            cursor, user_id, data.subscription_id)
+
         price = instrument["current_price"]
 
         # Insert sell transaction
@@ -128,6 +141,7 @@ def sell_instrument(
             (
                 user_id,
                 data.instrument_id,
+                data.subscription_id,
                 data.quantity,
                 price
             )
@@ -137,7 +151,8 @@ def sell_instrument(
 
         sales_proceeds = price * data.quantity
 
-        _credit_available(cursor, user_id, sales_proceeds)
+        _credit_subscription_pool(
+            cursor, data.subscription_id, sales_proceeds)
 
         conn.commit()
 

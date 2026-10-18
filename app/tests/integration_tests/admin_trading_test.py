@@ -97,19 +97,62 @@ def cheap_instrument(api, admin_account):
     return response.json()
 
 
+@pytest.fixture()
+def plan(api, admin_account):
+    title = f"Trade Plan {uuid.uuid4().hex[:8]}"
+    response = api.post(
+        "/plan/create",
+        json={
+            "plan": {
+                "title": title,
+                "min_amount": "10",
+                "duration": 30,
+                "roi": "12",
+                "risk_management": "STANDARD",
+                "description": "Trade test plan",
+            },
+            "features": ["Forex"],
+        },
+        headers=_auth(admin_account["token"]),
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+
+    yield body
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM plans WHERE id = %s", (body["id"],))
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+
+@pytest.fixture()
+def subscription(api, funded_user, plan):
+    response = api.post(
+        "/subscription/subscribe",
+        json={"plan_id": plan["id"], "amount": "100"},
+        headers=_auth(funded_user["token"]),
+    )
+    assert response.status_code == 200, response.text
+    return response.json()
+
+
 def _auth(token):
     return {"Authorization": f"Bearer {token}"}
 
 
 class TestAdminTrading:
     def test_admin_buys_on_behalf(
-        self, api, admin_account, funded_user, cheap_instrument
+        self, api, admin_account, funded_user, cheap_instrument, subscription
     ):
         response = api.post(
             f"/portfolio/admin/buy/{funded_user['id']}",
             json={
                 "instrument_id": cheap_instrument["id"],
                 "quantity": "2",
+                "subscription_id": subscription["id"],
             },
             headers=_auth(admin_account["token"]),
         )
@@ -135,19 +178,21 @@ class TestAdminTrading:
             json={
                 "instrument_id": cheap_instrument["id"],
                 "quantity": "1",
+                "subscription_id": 1,
             },
             headers=_auth(admin_account["token"]),
         )
         assert response.status_code == 404, response.text
 
     def test_admin_sells_on_behalf(
-        self, api, admin_account, funded_user, cheap_instrument
+        self, api, admin_account, funded_user, cheap_instrument, subscription
     ):
         buy = api.post(
             f"/portfolio/admin/buy/{funded_user['id']}",
             json={
                 "instrument_id": cheap_instrument["id"],
                 "quantity": "2",
+                "subscription_id": subscription["id"],
             },
             headers=_auth(admin_account["token"]),
         )
@@ -158,6 +203,7 @@ class TestAdminTrading:
             json={
                 "instrument_id": cheap_instrument["id"],
                 "quantity": "1",
+                "subscription_id": subscription["id"],
             },
             headers=_auth(admin_account["token"]),
         )
@@ -174,7 +220,9 @@ class TestAdminTrading:
         )
         assert float(row["net_quantity"]) == 1.0
 
-    def test_non_admin_forbidden(self, api, funded_user, cheap_instrument):
+    def test_non_admin_forbidden(
+        self, api, funded_user, cheap_instrument, subscription
+    ):
         headers = _auth(funded_user["token"])
         assert (
             api.post(
@@ -182,6 +230,7 @@ class TestAdminTrading:
                 json={
                     "instrument_id": cheap_instrument["id"],
                     "quantity": "1",
+                    "subscription_id": subscription["id"],
                 },
                 headers=headers,
             ).status_code
@@ -193,6 +242,7 @@ class TestAdminTrading:
                 json={
                     "instrument_id": cheap_instrument["id"],
                     "quantity": "1",
+                    "subscription_id": subscription["id"],
                 },
                 headers=headers,
             ).status_code

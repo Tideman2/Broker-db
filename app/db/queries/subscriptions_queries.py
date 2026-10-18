@@ -92,6 +92,23 @@ AND status = 'ACTIVE';
 """
 
 # ============================
+# POOL
+# ============================
+
+DEBIT_SUBSCRIPTION_POOL = """
+UPDATE subscriptions
+SET pool = pool - %s
+WHERE id = %s
+AND pool >= %s
+"""
+
+CREDIT_SUBSCRIPTION_POOL = """
+UPDATE subscriptions
+SET pool = pool + %s
+WHERE id = %s
+"""
+
+# ============================
 # VALIDATION QUERIES
 # ============================
 
