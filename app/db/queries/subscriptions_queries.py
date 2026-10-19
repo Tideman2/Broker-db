@@ -8,9 +8,11 @@ INSERT INTO subscriptions (
     plan_id,
     invested_amount,
     expiration_date,
+    pool,
     status
 )
 VALUES (
+    %s,
     %s,
     %s,
     %s,
@@ -87,6 +89,69 @@ FROM subscriptions
 WHERE id = %s 
 AND user_id = %s
 AND status = 'ACTIVE';
+"""
+
+GET_ACTIVE_SUBSCRIPTIONS_BY_USER = """
+SELECT *
+FROM subscriptions
+WHERE user_id = %s
+AND status = 'ACTIVE'
+ORDER BY created_at DESC;
+"""
+
+# ============================
+# POOL
+# ============================
+
+DEBIT_SUBSCRIPTION_POOL = """
+UPDATE subscriptions
+SET pool = pool - %s
+WHERE id = %s
+AND pool >= %s
+"""
+
+CREDIT_SUBSCRIPTION_POOL = """
+UPDATE subscriptions
+SET pool = pool + %s
+WHERE id = %s
+"""
+
+ZERO_SUBSCRIPTION_POOL = """
+UPDATE subscriptions
+SET pool = 0
+WHERE id = %s
+"""
+
+GET_SUBSCRIPTION_TRANSACTIONS = """
+SELECT
+    instrument_id,
+    type,
+    quantity,
+    price,
+    executed_at
+FROM transactions
+WHERE subscription_id = %s
+ORDER BY executed_at, id
+"""
+
+GET_SUBSCRIPTION_INSTRUMENT_TRANSACTIONS = """
+SELECT
+    instrument_id,
+    type,
+    quantity,
+    price,
+    executed_at
+FROM transactions
+WHERE subscription_id = %s
+AND instrument_id = %s
+ORDER BY executed_at, id
+"""
+
+GET_DUE_SUBSCRIPTIONS = """
+SELECT *
+FROM subscriptions
+WHERE status = 'ACTIVE'
+AND expiration_date <= NOW()
 """
 
 # ============================

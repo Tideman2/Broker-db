@@ -1,11 +1,11 @@
 INSERT_BUY_TRANSACTION = """
-INSERT INTO transactions ( user_id, instrument_id, type, quantity, price )
-VALUES ( %s, %s, 'BUY', %s, %s )
+INSERT INTO transactions ( user_id, instrument_id, subscription_id, type, quantity, price )
+VALUES ( %s, %s, %s, 'BUY', %s, %s )
 """
 
 INSERT_SELL_TRANSACTION = """
-INSERT INTO transactions ( user_id, instrument_id, type, quantity, price )
-VALUES ( %s, %s, 'SELL', %s, %s )
+INSERT INTO transactions ( user_id, instrument_id, subscription_id, type, quantity, price )
+VALUES ( %s, %s, %s, 'SELL', %s, %s )
 """
 
 GET_TRANSACTIONS_RELATED_TO_A_USER = """

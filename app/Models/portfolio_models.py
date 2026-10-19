@@ -12,11 +12,13 @@ from pydantic import BaseModel
 class BuyInstrumentRequest(BaseModel):
     instrument_id: int
     quantity: Decimal
+    subscription_id: int
 
 
 class SellInstrumentRequest(BaseModel):
     instrument_id: int
     quantity: Decimal
+    subscription_id: int
 
 # ============================
 # Helper Models

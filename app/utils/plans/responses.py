@@ -3,8 +3,11 @@ from app.Models.plans_models import (
     PlanResponse,
     PlansResponse,
     SubscriptionResponse,
-    SubscriptionsResponse
+    SubscriptionsResponse,
+    SubscriptionSummaryResponse
 )
+
+from app.utils.plans.settlement import _market_value_of_open_positions
 
 
 def _build_subscription_response(
@@ -19,6 +22,7 @@ def _build_subscription_response(
         invested_amount=subscription["invested_amount"].quantize(
             Decimal("0.01")
         ),
+        pool=subscription["pool"].quantize(Decimal("0.01")),
         expiration_date=subscription["expiration_date"],
         status=subscription["status"],
         created_at=subscription["created_at"],
@@ -40,6 +44,39 @@ def _build_subscriptions_response(
 ) -> SubscriptionsResponse:
 
     return SubscriptionsResponse(subscriptions=subscriptions)
+
+
+def _build_subscription_summary(
+    cursor,
+    subscription: dict
+) -> SubscriptionSummaryResponse:
+    """
+    Builds a per-subscription summary: the pooled cash plus the market
+    value of open positions, measured against the amount invested.
+    """
+
+    principal = subscription["invested_amount"]
+
+    current_value = (
+        subscription["pool"]
+        + _market_value_of_open_positions(cursor, subscription["id"])
+    )
+
+    profit_loss = current_value - principal
+
+    if principal:
+        roi_percent = profit_loss / principal * Decimal("100")
+    else:
+        roi_percent = Decimal("0")
+
+    return SubscriptionSummaryResponse(
+        subscription_id=subscription["id"],
+        principal=principal.quantize(Decimal("0.01")),
+        current_value=current_value.quantize(Decimal("0.01")),
+        profit_loss=profit_loss.quantize(Decimal("0.01")),
+        roi_percent=roi_percent.quantize(Decimal("0.01")),
+        status=subscription["status"],
+    )
 
 
 def _build_plan_response(

@@ -32,40 +32,6 @@ portfolio_router = APIRouter(
 )
 
 
-@portfolio_router.post(
-    "/buy",
-    response_model=TransactionResponse
-)
-def buy(
-    request: BuyInstrumentRequest,
-    user=Depends(get_current_user)
-):
-    """
-    Buy an instrument.
-    """
-    return buy_instrument(
-        user_id=user.user_id,
-        data=request
-    )
-
-
-@portfolio_router.post(
-    "/sell",
-    response_model=TransactionResponse
-)
-def sell(
-    request: SellInstrumentRequest,
-    user=Depends(get_current_user)
-):
-    """
-    Sell an instrument.
-    """
-    return sell_instrument(
-        user_id=user.user_id,
-        data=request
-    )
-
-
 # ======================================================
 # ADMIN
 # ======================================================

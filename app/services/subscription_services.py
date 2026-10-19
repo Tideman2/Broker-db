@@ -13,19 +13,22 @@ from app.utils.plans import (
     _validate_active_plan,
     _validate_minimum_investment,
     _build_subscription_response,
+    _build_subscription_summary,
     _build_subscription_list,
     _build_subscriptions_response,
     _get_subscription,
     _get_user_subscriptions,
+    _get_active_subscriptions,
     _validate_no_active_subscription,
     _get_active_subscription,
-    _cancel_subscription
+    _cancel_subscription,
+    _settle_subscription
 )
 
 from app.utils.wallet import (
     _get_wallet,
     _validate_available_balance,
-    _lock_funds
+    _debit_available
 )
 
 
@@ -89,7 +92,9 @@ def subscribe_to_a_plan(
             data.plan_id
         )
 
-        _lock_funds(cursor, user_id, data.amount)
+        # Move the invested amount out of the user's available balance and
+        # into the subscription's own pool.
+        _debit_available(cursor, user_id, data.amount)
 
         # compute expitration date using plan duration
         expiration_date = datetime.now(UTC) + timedelta(days=plan["duration"])
@@ -126,6 +131,41 @@ def subscribe_to_a_plan(
         conn.close()
 
 
+def get_subscription_summaries(
+        user_id: int
+):
+    """
+    Gets a profit summary for each of the user's active subscriptions.
+    """
+
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    try:
+        subscriptions = _get_active_subscriptions(
+            cursor,
+            user_id
+        )
+
+        return [
+            _build_subscription_summary(cursor, subscription)
+            for subscription in subscriptions
+        ]
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        ) from e
+
+    finally:
+        cursor.close()
+        conn.close()
+
+
 def cancel_subscription(
         user_id: int,
         subscription_id: int
@@ -142,10 +182,16 @@ def cancel_subscription(
         _get_active_subscription(
             cursor, user_id, subscription_id)
 
-        _cancel_subscription(cursor, subscription_id)
+        # Settle immediately: liquidate any open positions back into the
+        # pool, return the pool to the user's available balance, and mark
+        # the subscription CANCELLED.
+        _settle_subscription(
+            cursor, subscription_id, user_id, "CANCELLED")
+
+        subscription = _get_subscription(cursor, subscription_id)
 
         conn.commit()
-        return {"message": "Subscription cancelled", "id": subscription_id}
+        return _build_subscription_response(subscription)
 
     except HTTPException:
         conn.rollback()
