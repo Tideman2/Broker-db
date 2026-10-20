@@ -40,13 +40,19 @@ from app.Models.wallet_models import (
     DepositFundsRequest,
     DepositFundsResponse,
     WithdrawFundsRequest,
-    Withdraw
+    Withdraw,
+    MoneyFlowItem,
+    MoneyFlowResponse
 )
 from app.utils.wallet.withdraws import _get_user_withdrawal_records
 
 from app.services.pagination_service import PaginationRequest
 
 from app.db.queries.payment_method import (GET_PAYMENT_METHODS)
+from app.db.queries.wallet_queries import (
+    GET_LATEST_MONEY_IN,
+    GET_LATEST_MONEY_OUT
+)
 
 # ======================================================
 # DEPOSITS
@@ -378,6 +384,68 @@ def get_a_withdraw_record(
         withdraw = _get_withdrawal_record(cursor, withdraw_id)
 
         return _build_withdraw_response(withdraw)
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        ) from e
+
+    finally:
+        cursor.close()
+        conn.close()
+
+
+# ======================================================
+# MONEY FLOW
+# ======================================================
+
+def _build_money_flow_item(row: dict, direction: str) -> MoneyFlowItem:
+    """
+    Normalizes a money flow query row into an API item.
+    """
+
+    return MoneyFlowItem(
+        id=row["id"],
+        type=row["type"],
+        direction=direction,
+        amount=row["amount"].quantize(Decimal("0.01")),
+        asset_symbol=row["asset_symbol"],
+        status=row["status"],
+        occurred_at=row["occurred_at"]
+    )
+
+
+def get_money_flow(
+    user_id: int
+) -> MoneyFlowResponse:
+    """
+    Returns the latest four settled money movements in and out.
+    """
+
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    try:
+        cursor.execute(GET_LATEST_MONEY_IN, (user_id, user_id))
+        money_in = [
+            _build_money_flow_item(row, "IN")
+            for row in cursor.fetchall()
+        ]
+
+        cursor.execute(GET_LATEST_MONEY_OUT, (user_id, user_id))
+        money_out = [
+            _build_money_flow_item(row, "OUT")
+            for row in cursor.fetchall()
+        ]
+
+        return MoneyFlowResponse(
+            money_in=money_in,
+            money_out=money_out
+        )
 
     except HTTPException:
         raise

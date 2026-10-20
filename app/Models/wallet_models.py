@@ -20,6 +20,33 @@ class DepositStatus(str, Enum):
     rejected = "rejected"
 
 
+class MoneyFlowType(str, Enum):
+    deposit = "DEPOSIT"
+    withdrawal = "WITHDRAWAL"
+    subscription_investment = "SUBSCRIPTION_INVESTMENT"
+    subscription_payout = "SUBSCRIPTION_PAYOUT"
+
+
+class MoneyFlowDirection(str, Enum):
+    money_in = "IN"
+    money_out = "OUT"
+
+
+class MoneyFlowItem(BaseModel):
+    id: int
+    type: MoneyFlowType
+    direction: MoneyFlowDirection
+    amount: Decimal
+    asset_symbol: str | None = None
+    status: str
+    occurred_at: datetime
+
+
+class MoneyFlowResponse(BaseModel):
+    money_in: list[MoneyFlowItem]
+    money_out: list[MoneyFlowItem]
+
+
 class Deposit(BaseModel):
     amount: Decimal
     asset_id: int

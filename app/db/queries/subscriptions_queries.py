@@ -122,6 +122,15 @@ SET pool = 0
 WHERE id = %s
 """
 
+RECORD_SUBSCRIPTION_SETTLEMENT = """
+UPDATE subscriptions
+SET
+    settled_amount = %s,
+    settled_at = %s
+WHERE id = %s
+AND settled_at IS NULL
+"""
+
 GET_SUBSCRIPTION_TRANSACTIONS = """
 SELECT
     instrument_id,

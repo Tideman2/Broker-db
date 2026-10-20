@@ -1,9 +1,11 @@
+from datetime import datetime, UTC
 from decimal import Decimal
 
 from app.db.queries.subscriptions_queries import (
     GET_SUBSCRIPTION_TRANSACTIONS,
     GET_SUBSCRIPTION_BY_ID,
-    ZERO_SUBSCRIPTION_POOL
+    ZERO_SUBSCRIPTION_POOL,
+    RECORD_SUBSCRIPTION_SETTLEMENT
 )
 from app.db.queries.instrument_queries import CHECK_INSTRUMENT_ANY
 from app.db.queries.transaction_queries import INSERT_SELL_TRANSACTION
@@ -137,9 +139,16 @@ def _settle_subscription(
     cursor.execute(GET_SUBSCRIPTION_BY_ID, (subscription_id,))
     subscription = cursor.fetchone()
 
-    pool = subscription["pool"]
+    pool = subscription["pool"] or Decimal("0")
 
-    if pool and pool > Decimal("0"):
+    # Record the payout before the pool is zeroed so the money flow feed
+    # can report the amount that actually reached the user's wallet.
+    cursor.execute(
+        RECORD_SUBSCRIPTION_SETTLEMENT,
+        (pool, datetime.now(UTC), subscription_id)
+    )
+
+    if pool > Decimal("0"):
         _credit_available(cursor, user_id, pool)
 
     cursor.execute(ZERO_SUBSCRIPTION_POOL, (subscription_id,))
