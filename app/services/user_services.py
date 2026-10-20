@@ -19,7 +19,8 @@ from app.templates import template_env
 
 from app.Models.wallet_models import (
     AddBankDestinationRequest,
-    AddCryptoDestinationRequest
+    AddCryptoDestinationRequest,
+    UpdateDestinationRequest
 )
 from app.db.queries.user_queries import (
     INSERT_USER,
@@ -48,6 +49,12 @@ from app.utils.wallet import (
     _add_crypto_destination,
     _get_withdraw_destination,
     _validate_destination_label,
+    _validate_destination_update_label,
+    _update_withdraw_destination_label,
+    _update_bank_destination,
+    _update_crypto_destination,
+    _get_destination_withdrawal_counts,
+    _delete_withdraw_destination,
     _build_destination_response,
     _get_withdraw_destinations,
     _build_user_withdraw_destinations
@@ -586,7 +593,7 @@ def add_bank_withdraw_destination(user_id: int, destination: AddBankDestinationR
                               destination.bank_destination)
 
         newly_created_destination = _get_withdraw_destination(
-            cursor, destination_id)
+            cursor, destination_id, user_id)
         conn.commit()
 
         return _build_destination_response(newly_created_destination)
@@ -630,7 +637,7 @@ def add_crypto_withdraw_destination(user_id: int, destination: AddCryptoDestinat
                                 destination.crypto_destination)
 
         newly_created_destination = _get_withdraw_destination(
-            cursor, destination_id)
+            cursor, destination_id, user_id)
         conn.commit()
 
         return _build_destination_response(newly_created_destination)
@@ -645,6 +652,154 @@ def add_crypto_withdraw_destination(user_id: int, destination: AddCryptoDestinat
             status_code=500,
             detail=str(e)
         ) from e
+    finally:
+        cursor.close()
+        conn.close()
+
+
+def update_withdraw_destination(
+    user_id: int,
+    destination_id: int,
+    data: UpdateDestinationRequest
+):
+    """
+    Update a user's withdrawal destination.
+    """
+
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    try:
+        destination = _get_withdraw_destination(
+            cursor, destination_id, user_id)
+
+        if (
+            data.label is None
+            and data.bank_destination is None
+            and data.crypto_destination is None
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail="No destination fields supplied."
+            )
+
+        if data.bank_destination and data.crypto_destination:
+            raise HTTPException(
+                status_code=400,
+                detail="Only one destination detail block may be supplied."
+            )
+
+        if (
+            destination["type"] == "BANK"
+            and data.crypto_destination is not None
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail="Crypto details cannot be applied to a bank destination."
+            )
+
+        if (
+            destination["type"] == "CRYPTO"
+            and data.bank_destination is not None
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail="Bank details cannot be applied to a crypto destination."
+            )
+
+        counts = _get_destination_withdrawal_counts(
+            cursor, destination_id)
+
+        if int(counts["pending"] or 0) > 0:
+            raise HTTPException(
+                status_code=409,
+                detail="Destination has a pending withdrawal."
+            )
+
+        if data.label is not None:
+            label = data.label.strip()
+
+            if not label:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Label cannot be empty."
+                )
+
+            _validate_destination_update_label(
+                cursor, label, user_id, destination_id)
+            _update_withdraw_destination_label(
+                cursor, destination_id, user_id, label)
+
+        if data.bank_destination is not None:
+            _update_bank_destination(
+                cursor, destination_id, user_id, data.bank_destination)
+
+        if data.crypto_destination is not None:
+            _update_crypto_destination(
+                cursor, destination_id, user_id, data.crypto_destination)
+
+        conn.commit()
+
+        destination = _get_withdraw_destination(
+            cursor, destination_id, user_id)
+
+        return _build_destination_response(destination)
+
+    except HTTPException:
+        conn.rollback()
+        raise
+
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        ) from e
+
+    finally:
+        cursor.close()
+        conn.close()
+
+
+def delete_withdraw_destination(
+    user_id: int,
+    destination_id: int
+):
+    """
+    Delete an unused withdrawal destination.
+    """
+
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    try:
+        _get_withdraw_destination(cursor, destination_id, user_id)
+
+        counts = _get_destination_withdrawal_counts(
+            cursor, destination_id)
+
+        if int(counts["total"] or 0) > 0:
+            raise HTTPException(
+                status_code=409,
+                detail="Destination has withdrawal history and cannot be deleted."
+            )
+
+        _delete_withdraw_destination(cursor, destination_id, user_id)
+        conn.commit()
+
+        return None
+
+    except HTTPException:
+        conn.rollback()
+        raise
+
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        ) from e
+
     finally:
         cursor.close()
         conn.close()

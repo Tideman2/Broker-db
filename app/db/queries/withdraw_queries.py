@@ -320,14 +320,15 @@ AND wd.user_id = %s;
 """
 
 DELETE_WITHDRAWAL_DESTINATION = """
-DELETE wd
-FROM withdrawal_destination wd
-WHERE wd.id = %s
-AND wd.user_id = %s
-AND NOT EXISTS (
-    SELECT 1
-    FROM withdrawals wr
-    WHERE wr.withdrawal_destination_id = wd.id
-      AND wr.status = 'pending'
-);
+DELETE FROM withdrawal_destination
+WHERE id = %s
+AND user_id = %s;
+"""
+
+GET_WITHDRAWAL_COUNTS_FOR_DESTINATION = """
+SELECT
+    COUNT(*) AS total,
+    COALESCE(SUM(status = 'pending'), 0) AS pending
+FROM withdrawals
+WHERE withdrawal_destination_id = %s;
 """
