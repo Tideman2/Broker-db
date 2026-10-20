@@ -15,7 +15,8 @@ from app.services.wallet_services import (
     get_all_deposits,
     get_all_withdrawals,
     confirm_withdrawal,
-    reject_withdrawal
+    reject_withdrawal,
+    get_money_flow
 )
 
 from app.Models.wallet_models import (
@@ -28,7 +29,8 @@ from app.Models.wallet_models import (
     AdminWithdrawalRecordsResponse,
     DepositStatus,
     WithdrawStatus,
-    PaymentMethodResponse
+    PaymentMethodResponse,
+    MoneyFlowResponse
 )
 
 
@@ -166,6 +168,21 @@ def get_user_withdrawal_endpoint(
     Get user's withdrawal record.
     """
     return get_a_withdraw_record(withdraw_id=id)
+
+
+@wallet_router.get(
+    "/money-flow",
+    response_model=MoneyFlowResponse
+)
+def get_money_flow_endpoint(
+    user=Depends(get_current_user)
+):
+    """
+    Get the latest four settled money movements in and out.
+    """
+    return get_money_flow(
+        user_id=user.user_id
+    )
 
 
 @wallet_router.get(
