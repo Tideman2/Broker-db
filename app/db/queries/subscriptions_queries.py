@@ -156,6 +156,24 @@ AND instrument_id = %s
 ORDER BY executed_at, id
 """
 
+GET_SUBSCRIPTION_HOLDINGS = """
+SELECT
+    i.id AS instrument_id,
+    i.symbol,
+    i.name,
+    c.name AS category,
+    i.current_price,
+    i.is_active,
+    COALESCE(SUM(CASE WHEN t.type = 'BUY' THEN t.quantity ELSE 0 END), 0) AS total_buy,
+    COALESCE(SUM(CASE WHEN t.type = 'SELL' THEN t.quantity ELSE 0 END), 0) AS total_sell
+FROM transactions t
+JOIN instruments i ON i.id = t.instrument_id
+JOIN categories c ON c.id = i.category_id
+WHERE t.subscription_id = %s
+GROUP BY i.id, i.symbol, i.name, c.name, i.current_price, i.is_active
+ORDER BY i.symbol
+"""
+
 GET_DUE_SUBSCRIPTIONS = """
 SELECT *
 FROM subscriptions

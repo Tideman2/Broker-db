@@ -1,6 +1,11 @@
 
 from fastapi import APIRouter, Depends, Query
-from app.services import user_services, admin_services, subscription_services
+from app.services import (
+    user_services,
+    admin_services,
+    subscription_services,
+    portfolio_services
+)
 from app.Models.auth_models import (
     Admin,
     AdminPublic,
@@ -14,6 +19,7 @@ from app.Models.auth_models import (
     VerifyOTPRequest
 )
 from app.Models.plans_models import SubscriptionResponse
+from app.Models.portfolio_models import SubscriptionHoldingResponse
 from app.utils.jwt import require_admin
 
 admin_router = APIRouter(
@@ -138,6 +144,22 @@ def list_user_subscriptions_endpoint(
     """
     return subscription_services.get_user_subscriptions_for_admin(
         user_id=user_id
+    )
+
+
+@admin_router.get(
+    "/subscriptions/{subscription_id}/holdings",
+    response_model=list[SubscriptionHoldingResponse]
+)
+def get_subscription_holdings_endpoint(
+    subscription_id: int,
+    user=Depends(require_admin)
+):
+    """
+    Get the open positions held under one subscription for admin.
+    """
+    return portfolio_services.get_subscription_holdings(
+        subscription_id=subscription_id
     )
 
 

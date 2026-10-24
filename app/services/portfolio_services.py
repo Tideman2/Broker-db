@@ -6,9 +6,11 @@ from app.db.connection import get_connection
 from app.Models.portfolio_models import (
     BuyInstrumentRequest,
     SellInstrumentRequest,
-    PortfolioOverviewResponse
+    PortfolioOverviewResponse,
+    SubscriptionHoldingResponse
 )
 from app.db.queries.instrument_queries import GET_USER_INSTRUMENT_TRANSACTIONS, GROUP_USER_INSTRUMENT, GET_INSTRUMENT_RISK_WEIGHT
+from app.db.queries.subscriptions_queries import GET_SUBSCRIPTION_HOLDINGS
 from app.db.queries.transaction_queries import INSERT_BUY_TRANSACTION, INSERT_SELL_TRANSACTION
 
 from app.services.pagination_service import PaginationRequest
@@ -17,6 +19,7 @@ from app.utils.plans.subscription_helpers import (
     _require_active_subscription,
     _credit_subscription_pool,
     _debit_subscription_pool,
+    _get_subscription,
     _get_subscription_instrument_transactions
 )
 
@@ -223,6 +226,63 @@ def compute_holdings(user_id: int):
                 "net_quantity": net_quantity,
                 "instrument_value": instrument_value
             })
+
+        return holdings
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        ) from e
+
+    finally:
+        cursor.close()
+        conn.close()
+
+
+def get_subscription_holdings(subscription_id: int):
+    """
+    Returns the open positions held under one subscription.
+    """
+
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    try:
+        _get_subscription(cursor, subscription_id)
+
+        cursor.execute(GET_SUBSCRIPTION_HOLDINGS, (subscription_id,))
+        rows = cursor.fetchall()
+
+        holdings = []
+
+        for row in rows:
+
+            net_quantity = row["total_buy"] - row["total_sell"]
+
+            # Skip closed positions
+            if net_quantity <= 0:
+                continue
+
+            holdings.append(
+                SubscriptionHoldingResponse(
+                    instrument_id=row["instrument_id"],
+                    symbol=row["symbol"],
+                    name=row["name"],
+                    category=row["category"],
+                    current_price=row["current_price"],
+                    is_active=bool(row["is_active"]),
+                    total_buy=row["total_buy"],
+                    total_sell=row["total_sell"],
+                    net_quantity=net_quantity,
+                    instrument_value=(
+                        net_quantity * row["current_price"]
+                    )
+                )
+            )
 
         return holdings
 

@@ -63,6 +63,21 @@ class HoldingResponse(BaseModel):
     instrument_value: Decimal
 
 
+class SubscriptionHoldingResponse(BaseModel):
+    instrument_id: int
+    symbol: str
+    name: str
+    category: str
+
+    current_price: Decimal
+    is_active: bool
+
+    total_buy: Decimal
+    total_sell: Decimal
+    net_quantity: Decimal
+    instrument_value: Decimal
+
+
 class AssetAllocation(BaseModel):
     instrument_id: int
     symbol: str
