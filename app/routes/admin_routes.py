@@ -1,6 +1,6 @@
 
 from fastapi import APIRouter, Depends, Query
-from app.services import user_services, admin_services
+from app.services import user_services, admin_services, subscription_services
 from app.Models.auth_models import (
     Admin,
     AdminPublic,
@@ -13,6 +13,7 @@ from app.Models.auth_models import (
     UserResponse,
     VerifyOTPRequest
 )
+from app.Models.plans_models import SubscriptionResponse
 from app.utils.jwt import require_admin
 
 admin_router = APIRouter(
@@ -122,6 +123,22 @@ def fetch_user_as_admin(
     Get a single user by id for admin.
     """
     return user_services.get_user(user_id=user_id)
+
+
+@admin_router.get(
+    "/users/{user_id}/subscriptions",
+    response_model=list[SubscriptionResponse]
+)
+def list_user_subscriptions_endpoint(
+    user_id: int,
+    user=Depends(require_admin)
+):
+    """
+    Get every subscription belonging to a user for admin.
+    """
+    return subscription_services.get_user_subscriptions_for_admin(
+        user_id=user_id
+    )
 
 
 @admin_router.delete("/users/{user_id}")

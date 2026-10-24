@@ -5,7 +5,8 @@ from app.db.connection import get_connection
 
 from app.Models.plans_models import (
     SubscribeRequest,
-    Subscription
+    Subscription,
+    SubscriptionResponse
 )
 
 from app.utils.plans import (
@@ -31,6 +32,8 @@ from app.utils.wallet import (
     _debit_available
 )
 
+from app.utils.portfolio_helpers import _get_user
+
 
 def get_user_subscriptions(
         user_id: int
@@ -51,6 +54,40 @@ def get_user_subscriptions(
         return _build_subscriptions_response(
             _build_subscription_list(subscriptions)
         )
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        ) from e
+
+    finally:
+        cursor.close()
+        conn.close()
+
+
+def get_user_subscriptions_for_admin(
+        user_id: int
+) -> list[SubscriptionResponse]:
+    """
+    Gets every subscription belonging to a user for an admin.
+    """
+
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    try:
+        _get_user(cursor, user_id)
+
+        subscriptions = _get_user_subscriptions(
+            cursor,
+            user_id
+        )
+
+        return _build_subscription_list(subscriptions)
 
     except HTTPException:
         raise
