@@ -3,6 +3,8 @@ from app.services.user_services import (
     add_bank_withdraw_destination,
     add_crypto_withdraw_destination,
     get_withdraw_destinations,
+    update_withdraw_destination,
+    delete_withdraw_destination,
     get_preferences,
     update_preferences
 )
@@ -15,6 +17,7 @@ from app.Models.wallet_models import (
     AddBankDestinationRequest,
     DestinationResponse,
     AddCryptoDestinationRequest,
+    UpdateDestinationRequest,
     DepositResponse
 )
 
@@ -80,6 +83,44 @@ def get_withdraw_destinations_endpoint(
 
     return get_withdraw_destinations(
         user_id=user.user_id,
+    )
+
+
+@user_router.patch(
+    "/withdraw-destinations/{destination_id}",
+    response_model=DestinationResponse
+)
+def update_withdraw_destination_endpoint(
+    destination_id: int,
+    request: UpdateDestinationRequest,
+    user=Depends(get_current_user)
+):
+    """
+    Update a withdrawal destination.
+    """
+
+    return update_withdraw_destination(
+        user_id=user.user_id,
+        destination_id=destination_id,
+        data=request
+    )
+
+
+@user_router.delete(
+    "/withdraw-destinations/{destination_id}",
+    status_code=204
+)
+def delete_withdraw_destination_endpoint(
+    destination_id: int,
+    user=Depends(get_current_user)
+):
+    """
+    Delete an unused withdrawal destination.
+    """
+
+    return delete_withdraw_destination(
+        user_id=user.user_id,
+        destination_id=destination_id
     )
 
 

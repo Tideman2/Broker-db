@@ -53,5 +53,11 @@ from .withdraws import (
     _add_bank_destination,
     _add_withdraw_destination,
     _validate_destination_label,
+    _validate_destination_update_label,
+    _update_withdraw_destination_label,
+    _update_bank_destination,
+    _update_crypto_destination,
+    _get_destination_withdrawal_counts,
+    _delete_withdraw_destination,
     _get_withdraw_destinations
 )

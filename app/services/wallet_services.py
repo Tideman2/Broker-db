@@ -272,7 +272,8 @@ def submit_withdrawal(
         _lock_funds(cursor, user_id, request.amount)
 
         # Get withdraw destination
-        destination = _get_withdraw_destination(cursor, request.destination_id)
+        destination = _get_withdraw_destination(
+            cursor, request.destination_id, user_id)
 
         if destination["asset_id"] is None:
             asset = _get_asset_by_symbol(cursor, "USDT")

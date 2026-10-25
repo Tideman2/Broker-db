@@ -13,7 +13,12 @@ from app.db.queries.withdraw_queries import (
     GET_ALL_WITHDRAWALS,
     CONFIRM_WITHDRAWAL,
     REJECT_WITHDRAWAL,
-    GET_WITHDRAWAL_DESTINATIONS
+    GET_WITHDRAWAL_DESTINATIONS,
+    UPDATE_WITHDRAWAL_DESTINATION,
+    UPDATE_BANK_DESTINATION,
+    UPDATE_CRYPTO_DESTINATION,
+    DELETE_WITHDRAWAL_DESTINATION,
+    GET_WITHDRAWAL_COUNTS_FOR_DESTINATION
 )
 
 from app.Models.wallet_models import (
@@ -36,15 +41,20 @@ def _validate_available_balance(amount: Decimal, available=0):
         )
 
 
-def _get_withdraw_destination(cursor, destination_id):
+def _get_withdraw_destination(cursor, destination_id, user_id=None):
     """
-    Get withdraw_destination or 404 error
+    Get withdraw_destination or 404 error.
+
+    When user_id is supplied the destination must belong to that user,
+    so callers cannot operate on another user's destination.
     """
 
     cursor.execute(GET_WITHDRAWAL_DESTINATION, (destination_id,))
     destination = cursor.fetchone()
 
-    if not destination:
+    if not destination or (
+        user_id is not None and destination["user_id"] != user_id
+    ):
         raise HTTPException(
             status_code=404,
             detail="withdraw destination not found"
@@ -95,6 +105,99 @@ def _validate_destination_label(cursor, label: str, user_id: int):
             status_code=404,
             detail="Label already used"
         )
+
+
+def _validate_destination_update_label(
+    cursor, label: str, user_id: int, destination_id: int
+):
+    """
+    Checks a new label does not belong to a different destination.
+    """
+
+    cursor.execute(GET_WITHDRAW_DESTINATION_BY_LABEL, (label, user_id))
+    existing = cursor.fetchone()
+
+    if existing and existing["id"] != destination_id:
+        raise HTTPException(
+            status_code=409,
+            detail="Label already used"
+        )
+
+
+def _update_withdraw_destination_label(
+    cursor, destination_id: int, user_id: int, label: str
+):
+    """
+    Updates a destination label.
+    """
+
+    cursor.execute(
+        UPDATE_WITHDRAWAL_DESTINATION,
+        (label, destination_id, user_id)
+    )
+
+
+def _update_bank_destination(
+    cursor, destination_id: int, user_id: int, bank: BankDestination
+):
+    """
+    Updates a bank destination's details.
+    """
+
+    cursor.execute(
+        UPDATE_BANK_DESTINATION,
+        (
+            bank.bank_name,
+            bank.account_name,
+            bank.account_number,
+            destination_id,
+            user_id
+        )
+    )
+
+
+def _update_crypto_destination(
+    cursor, destination_id: int, user_id: int, crypto: CryptoDestination
+):
+    """
+    Updates a crypto destination's details.
+    """
+
+    cursor.execute(
+        UPDATE_CRYPTO_DESTINATION,
+        (
+            crypto.address,
+            crypto.asset_id,
+            destination_id,
+            user_id
+        )
+    )
+
+
+def _get_destination_withdrawal_counts(cursor, destination_id: int):
+    """
+    Returns the total and pending withdrawal counts for a destination.
+    """
+
+    cursor.execute(
+        GET_WITHDRAWAL_COUNTS_FOR_DESTINATION,
+        (destination_id,)
+    )
+
+    return cursor.fetchone()
+
+
+def _delete_withdraw_destination(
+    cursor, destination_id: int, user_id: int
+):
+    """
+    Deletes a destination owned by the user.
+    """
+
+    cursor.execute(
+        DELETE_WITHDRAWAL_DESTINATION,
+        (destination_id, user_id)
+    )
 
 
 def _add_crypto_destination(

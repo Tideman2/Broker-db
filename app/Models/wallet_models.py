@@ -138,6 +138,12 @@ class AddCryptoDestinationRequest(BaseModel):
     crypto_destination: CryptoDestination
 
 
+class UpdateDestinationRequest(BaseModel):
+    label: str | None = None
+    bank_destination: BankDestination | None = None
+    crypto_destination: CryptoDestination | None = None
+
+
 class DestinationResponse(BaseModel):
     id: int
     label: str
