@@ -196,5 +196,5 @@ SELECT *
 FROM subscriptions
 WHERE user_id = %s
 AND plan_id = %s
-AND status = "ACTIVE"
+AND status = 'ACTIVE'
 """
